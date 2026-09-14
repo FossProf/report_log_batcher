@@ -3,9 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Report Log Batcher"
         Width="720"
-        Height="520"
+        Height="660"
         MinWidth="520"
-        MinHeight="420"
+        MinHeight="560"
         WindowStartupLocation="CenterScreen">
     <Grid Margin="12">
         <Grid.RowDefinitions>
@@ -43,7 +43,21 @@
                 <TextBlock Margin="0,6,0,0"
                            Foreground="#C0392B"
                            TextWrapping="Wrap"
-                           Text="{Binding ReportLogError}" />
+                           Text="{Binding ReportLogError}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <Trigger Property="Text" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </Trigger>
+                                <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource Self}}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
             </StackPanel>
         </GroupBox>
 
@@ -74,7 +88,21 @@
                 <TextBlock Margin="0,6,0,0"
                            Foreground="#C0392B"
                            TextWrapping="Wrap"
-                           Text="{Binding ReportsDirectoryError}" />
+                           Text="{Binding ReportsDirectoryError}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <Trigger Property="Text" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </Trigger>
+                                <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource Self}}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
             </StackPanel>
         </GroupBox>
 
@@ -108,9 +136,16 @@
                         <Style TargetType="TextBlock">
                             <Setter Property="Foreground" Value="#2E7D32" />
                             <Setter Property="Text" Value="{Binding TemplateStatus}" />
+                            <Setter Property="Visibility" Value="Visible" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding TemplateStatusIsError}" Value="True">
                                     <Setter Property="Foreground" Value="#C0392B" />
+                                </DataTrigger>
+                                <Trigger Property="Text" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </Trigger>
+                                <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource Self}}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -127,7 +162,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" MinHeight="60" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -211,13 +246,41 @@
                            Margin="0,8,0,0"
                            Foreground="Gray"
                            TextWrapping="Wrap"
-                           Text="{Binding BatchEmptyMessage}" />
+                           Text="{Binding BatchEmptyMessage}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <Trigger Property="Text" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </Trigger>
+                                <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource Self}}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
 
                 <TextBlock Grid.Row="4"
                            Margin="0,8,0,0"
                            Foreground="#C0392B"
                            TextWrapping="Wrap"
-                           Text="{Binding BatchError}" />
+                           Text="{Binding BatchError}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <Trigger Property="Text" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </Trigger>
+                                <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource Self}}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
 
                 <Button Grid.Row="5"
                         Content="Build Batch"
