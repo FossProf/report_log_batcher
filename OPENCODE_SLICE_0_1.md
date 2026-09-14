@@ -6,27 +6,51 @@ Implement ONLY vertical Slice 0/1: project foundation and file selection.
 
 ## Target
 
-Python 3.12+ Windows desktop application using PySide6.
+- C#
+- .NET 10
+- Windows desktop application
+- WPF
+- MVVM
+- xUnit
 
-## Create
+Do not implement later slices.
 
-Use a src layout with package:
+## Solution Structure
 
-    src/report_log_batcher/
-        __init__.py
-        __main__.py
-        app.py
-        gui/
-            __init__.py
-            main_window.py
-        services/
-            __init__.py
-            path_validation.py
+Create:
+
+    ReportLogBatcher.sln
+
+    src/
+        ReportLogBatcher.App/
+            ReportLogBatcher.App.csproj
+            App.xaml
+            App.xaml.cs
+            MainWindow.xaml
+            MainWindow.xaml.cs
+            ViewModels/
+                MainWindowViewModel.cs
+            Services/
+                FileDialogService.cs
+                SettingsService.cs
+
+        ReportLogBatcher.Core/
+            ReportLogBatcher.Core.csproj
+            Services/
+                PathValidationService.cs
 
     tests/
-        test_path_validation.py
+        ReportLogBatcher.Core.Tests/
+            ReportLogBatcher.Core.Tests.csproj
+            PathValidationServiceTests.cs
 
-Also create appropriate `pyproject.toml` and `.gitignore`.
+Project responsibilities:
+
+- `ReportLogBatcher.App` — WPF UI, MVVM presentation logic, Windows dialogs, local UI settings.
+- `ReportLogBatcher.Core` — application/domain logic independent of WPF.
+- `ReportLogBatcher.Core.Tests` — unit tests for Core.
+
+Do NOT create Infrastructure/OpenXML implementation yet. That belongs to later slices.
 
 ## GUI Requirements
 
@@ -36,138 +60,268 @@ Create a clean main window titled:
 
 Provide two selection sections.
 
-### 1. Project Report Log
+### Project Report Log
 
-- read-only path field
-- Browse button
-- use native Windows file dialog
-- only accept existing `.docx` files
+Provide:
 
-### 2. Finalized Reports Directory
+- read-only path TextBox
+- `Browse...` button
+- native Windows file-selection dialog
 
-- read-only path field
-- Browse button
-- use native directory-selection dialog
-- only accept existing directories
+Only existing `.docx` files are valid.
 
-Below these controls reserve an empty area/group labeled:
+Dialog filter should target Word `.docx` documents.
+
+### Finalized Reports Directory
+
+Provide:
+
+- read-only path TextBox
+- `Browse...` button
+- native Windows folder-selection dialog
+
+Only existing directories are valid.
+
+### Batch Area
+
+Below the selection controls, create an empty bordered/grouped area labeled:
 
 `Batch`
 
-Do NOT implement report discovery or populate the batch yet.
+Do NOT discover or display reports yet.
 
-Add a disabled button:
+Provide a:
 
 `Build Batch`
 
-Enable Build Batch only when BOTH selections are valid.
+button.
 
-## Validation
+It MUST remain disabled until both:
 
-Implement validation outside GUI code in `services/path_validation.py`.
+- report-log path is valid
+- finalized-reports directory is valid
 
-Use `pathlib.Path`.
+The button performs no batch-building operation in this slice.
 
-Provide independently testable functions for:
+## MVVM Requirements
 
-- validating report-log path
-- validating finalized-report directory
+Use MVVM.
 
-A valid report log:
+`MainWindowViewModel` owns the UI state, including:
 
-- exists
-- is a file
-- has case-insensitive `.docx` extension
+- selected report-log path
+- selected reports-directory path
+- whether Build Batch is enabled
 
-A valid report directory:
+Do not place filesystem validation logic in `MainWindow.xaml.cs`.
 
-- exists
-- is a directory
+Keep code-behind minimal and limited to WPF concerns that cannot reasonably be expressed through binding/commands.
 
-Display concise GUI validation errors when invalid input is encountered.
+Use `ICommand` implementations for Browse actions.
 
-Do not crash because a user cancels a file dialog.
+Do not introduce a third-party MVVM framework in this slice.
 
-## Persistence
+Implement a small reusable command implementation if needed.
 
-For this slice, remember the last successfully selected report-log path and reports-directory path between application launches using `QSettings`.
+## File Dialogs
+
+Encapsulate Windows file/folder dialogs behind `FileDialogService`.
+
+The ViewModel must not directly instantiate dialogs.
+
+Canceling either dialog must:
+
+- leave the previous valid selection unchanged
+- produce no error
+- not crash
+
+## Path Validation
+
+Implement validation in:
+
+`ReportLogBatcher.Core/Services/PathValidationService.cs`
+
+Use `System.IO`.
+
+Provide independently testable validation for:
+
+### Report Log
+
+Valid only when:
+
+- path is nonempty
+- path exists
+- path represents a file
+- extension is `.docx`, case-insensitive
+
+### Reports Directory
+
+Valid only when:
+
+- path is nonempty
+- path exists
+- path represents a directory
+
+Do not attempt to open or modify Word documents in this slice.
+
+Return enough information for the GUI to present a concise validation message rather than only returning `true/false`.
+
+## Error Handling
+
+Invalid selections must produce a concise user-visible error.
+
+Examples:
+
+- `The selected report log does not exist.`
+- `The report log must be a .docx file.`
+- `The selected reports directory does not exist.`
+
+Expected validation failures are not application crashes.
+
+Unexpected exceptions should be logged and presented using a generic user-facing error message.
+
+## Settings Persistence
+
+Remember the last successfully selected:
+
+- report-log path
+- finalized-reports directory
+
+between launches.
+
+Use a simple application-local settings implementation appropriate for .NET/WPF.
+
+Do not add a third-party settings package.
 
 On startup:
 
-- restore each stored path only if it is still valid
-- otherwise leave that field empty
+- restore a stored report-log path only if still valid
+- restore a stored directory only if still valid
+- otherwise leave the corresponding selection empty
+
+Never restore an invalid path into the active application state.
 
 ## Logging
 
-Configure standard Python logging at application startup.
+Use `Microsoft.Extensions.Logging`.
 
-Log application startup and unexpected errors.
+Keep configuration minimal.
 
-Do not create a complex logging framework.
+Log:
+
+- application startup
+- unexpected exceptions
+- important path-selection failures where useful
+
+Do not build a complex logging subsystem.
+
+Do not add telemetry.
 
 ## Tests
 
-Use pytest.
+Use xUnit.
 
-Test path validation with temporary files/directories, including:
+Create unit tests for `PathValidationService`.
 
-- valid `.docx`
-- uppercase `.DOCX`
-- wrong extension
-- nonexistent file
-- directory supplied as report log
-- valid reports directory
-- nonexistent directory
-- file supplied as reports directory
+Use temporary files/directories created by the tests.
 
-Tests must not require Microsoft Word.
+Required cases:
+
+1. valid `.docx`
+2. valid uppercase `.DOCX`
+3. wrong file extension
+4. nonexistent report-log file
+5. directory supplied as report log
+6. valid reports directory
+7. nonexistent reports directory
+8. file supplied as reports directory
+9. null/empty/whitespace paths where applicable
+
+Tests must:
+
+- not require Microsoft Word
+- not modify production documents
+- clean up temporary resources
+
+## Dependencies
+
+Keep NuGet dependencies minimal.
+
+Do NOT add Open XML SDK yet unless required solely for project compilation, which it should not be.
+
+Do NOT add:
+
+- Office Interop
+- database packages
+- AI/LLM packages
+- third-party MVVM frameworks
+- third-party settings frameworks
 
 ## Out of Scope
 
 Do NOT implement:
 
-- scanning reports
-- sorting
-- staging list entries
+- scanning finalized reports
+- natural sorting
+- staging-list entries
+- report reordering
 - drag/drop
-- rename
-- removal
-- Word parsing
-- python-docx processing
+- file renaming
+- removal from batch
 - ReportRecord
-- template fields
+- Word parsing
+- Open XML processing
+- template parsing
+- required template fields
+- manual field-entry dialogs
 - batch processing
 - progress bars
 - report-log modification
 - backups
 - duplicate detection
+- audit records
+- production packaging
 
-`python-docx` may be declared as a future project dependency, but it must not be used in this slice.
+These belong to later vertical slices.
 
-## Quality
+## Acceptance Criteria
 
-Keep GUI and validation logic separated.
+Slice 0/1 is complete when:
 
-Use type hints.
+1. `ReportLogBatcher.sln` builds successfully.
+2. WPF application launches successfully.
+3. Main window displays both required selectors and empty Batch area.
+4. Native Explorer dialogs select the report log and reports directory.
+5. Invalid selections are rejected with concise messages.
+6. Canceling dialogs causes no state change or error.
+7. `Build Batch` enables only when both paths are valid.
+8. Valid selections persist across application restart.
+9. Invalid persisted paths are ignored on startup.
+10. Core path validation is independent of WPF.
+11. All xUnit tests pass.
+12. No functionality from Slice 2 or later has been implemented.
 
-Avoid unnecessary abstractions.
+## Verification
 
-Do not add dependencies beyond what this slice requires.
+Before completion run:
 
-The application must launch with:
+    dotnet restore
+    dotnet build
+    dotnet test
 
-    python -m report_log_batcher
+Fix all build errors and failing tests.
 
-Run the test suite after implementation and fix failures.
+Do not suppress warnings merely to obtain a clean build unless the warning is understood and the suppression is justified.
 
 ## Completion Report
 
-At completion report:
+At completion, report concisely:
 
-1. files created/changed
-2. tests executed and results
-3. exact command to install dependencies
-4. exact command to launch the app
-5. any assumptions made
+1. files created or changed
+2. NuGet packages added
+3. `dotnet build` result
+4. `dotnet test` result and test count
+5. exact command to launch the application
+6. assumptions or deviations from this specification
 
 Do not begin Slice 2.

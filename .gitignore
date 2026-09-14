@@ -1,0 +1,48 @@
+# Build output
+bin/
+obj/
+Debug/
+Release/
+[xX]64/
+[xX]86/
+AppPackages/
+BundleArtifacts/
+
+# Visual Studio
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+*.VisualState.xml
+*.suo
+*.userprefs
+*.upgradeuserprefs
+*.capfrag
+
+# Rider / ReSharper
+.idea/
+*.ReSharper*
+_ReSharper/
+[Tt]est[Rr]esult*/
+*.DotSettings.user
+
+# Publish / artifacts
+publish/
+artifacts/
+
+# Test results
+[Tt]est[Rr]esult*/
+*.trx
+coverage*.json
+coverage*.xml
+[lL]cov/
+*.lcov
+
+# NuGet
+*.nupkg
+packages/
+
+# OS / editor cruft
+Thumbs.db
+Desktop.ini
+*.log
