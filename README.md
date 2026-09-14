@@ -25,10 +25,10 @@ SPIN .docx -> Parser -> ReportRecord -> Validator -> Template Renderer -> Master
 
 ## Technology
 
-- Python 3.12+
-- PySide6
-- python-docx
-- pytest
+- C# (.NET 8+)
+- WPF
+- Open XML SDK
+- NUnit / xUnit
 - Windows
 
 ## Development

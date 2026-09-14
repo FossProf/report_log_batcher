@@ -42,13 +42,13 @@ A ReportRecord containing a blank required field MUST NOT reach the renderer/wri
 
 ## Technology
 
-- Python 3.12+
+- C# (.NET 8+)
 - Windows desktop application
-- PySide6
-- python-docx
-- pathlib.Path
-- pytest
-- Python logging module
+- WPF (MVVM)
+- Open XML SDK (DocumentFormat.OpenXml)
+- System.IO.Path / System.IO.Directory
+- NUnit
+- Microsoft.Extensions.Logging (or built-in logging)
 
 Do not introduce another GUI framework or Word-processing library without explicit approval.
 
