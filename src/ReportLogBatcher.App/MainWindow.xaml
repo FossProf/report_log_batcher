@@ -84,6 +84,7 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -95,8 +96,43 @@
                            FontWeight="SemiBold"
                            Text="{Binding BatchCount, StringFormat=Reports: {0}}" />
 
-                <ListView Grid.Row="1"
+                <StackPanel Grid.Row="1"
+                            Orientation="Horizontal"
+                            Margin="0,0,0,8">
+                    <Button Content="Move Up"
+                            MinWidth="76"
+                            Padding="8,3"
+                            Margin="0,0,6,0"
+                            AutomationProperties.Name="Move selected report up"
+                            Command="{Binding MoveUpCommand}" />
+                    <Button Content="Move Down"
+                            MinWidth="76"
+                            Padding="8,3"
+                            Margin="0,0,6,0"
+                            AutomationProperties.Name="Move selected report down"
+                            Command="{Binding MoveDownCommand}" />
+                    <Button Content="Rename File"
+                            MinWidth="90"
+                            Padding="8,3"
+                            Margin="0,0,6,0"
+                            AutomationProperties.Name="Rename selected report"
+                            Command="{Binding RenameFileCommand}" />
+                    <Button Content="Remove from Batch"
+                            MinWidth="120"
+                            Padding="8,3"
+                            Margin="0,0,6,0"
+                            AutomationProperties.Name="Remove selected report from batch"
+                            Command="{Binding RemoveFromBatchCommand}" />
+                    <Button Content="Reload Batch"
+                            MinWidth="90"
+                            Padding="8,3"
+                            AutomationProperties.Name="Reload batch from reports directory"
+                            Command="{Binding ReloadBatchCommand}" />
+                </StackPanel>
+
+                <ListView Grid.Row="2"
                           ItemsSource="{Binding BatchEntries}"
+                          SelectedItem="{Binding SelectedRow, Mode=TwoWay}"
                           ScrollViewer.VerticalScrollBarVisibility="Auto"
                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                           BorderThickness="1"
@@ -123,19 +159,19 @@
                     </ListView.View>
                 </ListView>
 
-                <TextBlock Grid.Row="2"
+                <TextBlock Grid.Row="3"
                            Margin="0,8,0,0"
                            Foreground="Gray"
                            TextWrapping="Wrap"
                            Text="{Binding BatchEmptyMessage}" />
 
-                <TextBlock Grid.Row="3"
+                <TextBlock Grid.Row="4"
                            Margin="0,8,0,0"
                            Foreground="#C0392B"
                            TextWrapping="Wrap"
                            Text="{Binding BatchError}" />
 
-                <Button Grid.Row="4"
+                <Button Grid.Row="5"
                         Content="Build Batch"
                         Width="120"
                         Height="28"

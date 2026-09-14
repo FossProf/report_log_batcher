@@ -31,6 +31,8 @@ public partial class App : Application
                 new FileDialogService(),
                 settings,
                 new BatchDiscoveryService(),
+                new BatchFileService(),
+                new RenameFileDialogService(),
                 _loggerFactory);
 
             MainWindow = new MainWindow { DataContext = viewModel };

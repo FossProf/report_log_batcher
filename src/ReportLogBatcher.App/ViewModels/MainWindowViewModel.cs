@@ -14,7 +14,10 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly IFileDialogService _dialogService;
     private readonly SettingsService _settings;
     private readonly BatchDiscoveryService _discoveryService;
+    private readonly BatchFileService _fileService;
+    private readonly IRenameFileDialogService _renameDialogService;
     private readonly ILogger _logger;
+    private readonly StagedBatch _stagedBatch = new();
 
     private string _reportLogPath = string.Empty;
     private string _reportsDirectoryPath = string.Empty;
@@ -23,6 +26,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private string? _batchEmptyMessage;
     private string? _batchError;
     private int _batchCount;
+    private BatchEntryRow? _selectedRow;
     private PathValidationResult? _reportLogValidation;
     private PathValidationResult? _reportsDirectoryValidation;
 
@@ -30,16 +34,25 @@ public sealed class MainWindowViewModel : ObservableObject
         IFileDialogService dialogService,
         SettingsService settingsService,
         BatchDiscoveryService discoveryService,
+        BatchFileService fileService,
+        IRenameFileDialogService renameDialogService,
         ILoggerFactory loggerFactory)
     {
         _dialogService = dialogService;
         _settings = settingsService;
         _discoveryService = discoveryService;
+        _fileService = fileService;
+        _renameDialogService = renameDialogService;
         _logger = loggerFactory.CreateLogger<MainWindowViewModel>();
 
         BrowseReportLogCommand = new RelayCommand(BrowseReportLog);
         BrowseReportsDirectoryCommand = new RelayCommand(BrowseReportsDirectory);
         BuildBatchCommand = new RelayCommand(OnBuildBatch, () => CanBuildBatch);
+        MoveUpCommand = new RelayCommand(OnMoveUp, () => CanMoveUp);
+        MoveDownCommand = new RelayCommand(OnMoveDown, () => CanMoveDown);
+        RemoveFromBatchCommand = new RelayCommand(OnRemoveFromBatch, () => SelectedRow is not null);
+        RenameFileCommand = new RelayCommand(OnRenameFile, () => SelectedRow is not null);
+        ReloadBatchCommand = new RelayCommand(OnReloadBatch, () => CanReloadBatch);
 
         RestoreStoredSelections();
     }
@@ -71,7 +84,20 @@ public sealed class MainWindowViewModel : ObservableObject
     public bool CanBuildBatch =>
         _reportLogValidation?.IsValid == true && _reportsDirectoryValidation?.IsValid == true;
 
+    public bool CanReloadBatch =>
+        _reportsDirectoryValidation?.IsValid == true;
+
     public ObservableCollection<BatchEntryRow> BatchEntries { get; } = new();
+
+    public BatchEntryRow? SelectedRow
+    {
+        get => _selectedRow;
+        set
+        {
+            if (SetProperty(ref _selectedRow, value))
+                RefreshCommands();
+        }
+    }
 
     public int BatchCount
     {
@@ -96,6 +122,36 @@ public sealed class MainWindowViewModel : ObservableObject
     public ICommand BrowseReportsDirectoryCommand { get; }
 
     public ICommand BuildBatchCommand { get; }
+
+    public ICommand MoveUpCommand { get; }
+
+    public ICommand MoveDownCommand { get; }
+
+    public ICommand RemoveFromBatchCommand { get; }
+
+    public ICommand RenameFileCommand { get; }
+
+    public ICommand ReloadBatchCommand { get; }
+
+    private bool CanMoveUp
+    {
+        get
+        {
+            var index = SelectedIndex;
+            return index is > 0;
+        }
+    }
+
+    private bool CanMoveDown
+    {
+        get
+        {
+            var index = SelectedIndex;
+            return index >= 0 && index < BatchEntries.Count - 1;
+        }
+    }
+
+    private int SelectedIndex => SelectedRow is null ? -1 : BatchEntries.IndexOf(SelectedRow);
 
     private void BrowseReportLog()
     {
@@ -177,18 +233,11 @@ public sealed class MainWindowViewModel : ObservableObject
 
         try
         {
-            ClearBatchUi();
-
             var entries = _discoveryService.Discover(_reportsDirectoryPath);
 
-            var sequence = 1;
-            foreach (var entry in entries)
-            {
-                BatchEntries.Add(new BatchEntryRow(entry, sequence));
-                sequence++;
-            }
+            _stagedBatch.Replace(entries);
+            RebindRows();
 
-            BatchCount = BatchEntries.Count;
             if (BatchCount == 0)
                 BatchEmptyMessage = "No .docx reports were found in the selected directory.";
 
@@ -202,12 +251,148 @@ public sealed class MainWindowViewModel : ObservableObject
         }
     }
 
+    private void OnMoveUp()
+    {
+        var index = SelectedIndex;
+        if (!CanMoveUp)
+            return;
+
+        _stagedBatch.MoveUp(index);
+        RebindRows(index - 1);
+        _logger.LogInformation("Moved staged entry at index {Index} up.", index);
+    }
+
+    private void OnMoveDown()
+    {
+        var index = SelectedIndex;
+        if (!CanMoveDown)
+            return;
+
+        _stagedBatch.MoveDown(index);
+        RebindRows(index + 1);
+        _logger.LogInformation("Moved staged entry at index {Index} down.", index);
+    }
+
+    private void OnRemoveFromBatch()
+    {
+        var index = SelectedIndex;
+        if (index < 0)
+            return;
+
+        var removed = _stagedBatch.Entries[index];
+        var newSelection = _stagedBatch.RemoveAt(index);
+        RebindRows(newSelection);
+
+        _logger.LogInformation(
+            "Removed {File} from the batch (source untouched).", removed.FileName);
+
+        if (_stagedBatch.Count == 0)
+            BatchEmptyMessage = "No .docx reports were found in the selected directory.";
+    }
+
+    private void OnRenameFile()
+    {
+        var index = SelectedIndex;
+        if (index < 0)
+            return;
+
+        var entry = _stagedBatch.Entries[index];
+
+        string? message = null;
+        while (true)
+        {
+            var proposed = _renameDialogService.Prompt(entry.FileName, message);
+            if (proposed is null)
+                return;
+
+            var validation = _fileService.ValidateFileName(proposed);
+            if (!validation.IsValid)
+            {
+                message = validation.ErrorMessage;
+                continue;
+            }
+
+            var result = _fileService.RenameFile(entry.FullPath, proposed);
+            if (result.IsSuccess)
+            {
+                var updated = new BatchEntry(result.DestinationPath!, result.DestinationFileName!, entry.OriginalIndex);
+                _stagedBatch.UpdateEntry(index, updated);
+                RebindRows(index);
+
+                _logger.LogInformation(
+                    "Renamed staged file {Source} to {Destination}.", entry.FullPath, result.DestinationPath);
+                return;
+            }
+
+            if (result.FailureReason is RenameFailureReason.InvalidFileName or RenameFailureReason.Collision)
+            {
+                message = result.ErrorMessage;
+                continue;
+            }
+
+            _logger.LogError(
+                "Rename failed for {Source} targeting {Proposed}: {Reason} {Message}",
+                entry.FullPath, proposed, result.FailureReason, result.ErrorMessage);
+
+            BatchError = "The file could not be renamed. See the application logs for details.";
+            return;
+        }
+    }
+
+    private void OnReloadBatch()
+    {
+        try
+        {
+            var entries = _discoveryService.Discover(_reportsDirectoryPath);
+
+            _stagedBatch.Replace(entries);
+            RebindRows();
+
+            BatchEmptyMessage = BatchCount == 0
+                ? "No .docx reports were found in the selected directory."
+                : null;
+            BatchError = null;
+
+            _logger.LogInformation(
+                "Reloaded batch with {Count} reports from {Directory}.", BatchCount, _reportsDirectoryPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Reload failed for {Directory}.", _reportsDirectoryPath);
+            ClearBatchUi();
+            BatchError = "Could not read the selected reports directory. See the application logs for details.";
+        }
+    }
+
+    private void RebindRows(int? selectIndex = null)
+    {
+        SelectedRow = null;
+        BatchEntries.Clear();
+
+        var sequence = 1;
+        foreach (var entry in _stagedBatch.Entries)
+        {
+            BatchEntries.Add(new BatchEntryRow(entry, sequence));
+            sequence++;
+        }
+
+        BatchCount = _stagedBatch.Count;
+
+        if (selectIndex is int index && index >= 0 && index < BatchEntries.Count)
+            SelectedRow = BatchEntries[index];
+
+        RefreshCommands();
+    }
+
     private void ClearBatchUi()
     {
+        _stagedBatch.Clear();
+        SelectedRow = null;
         BatchEntries.Clear();
         BatchCount = 0;
         BatchEmptyMessage = null;
         BatchError = null;
+        RefreshCommands();
     }
 
     private void RestoreStoredSelections()
@@ -252,7 +437,18 @@ public sealed class MainWindowViewModel : ObservableObject
     private void RefreshBuildState()
     {
         OnPropertyChanged(nameof(CanBuildBatch));
+        OnPropertyChanged(nameof(CanReloadBatch));
         ((RelayCommand)BuildBatchCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)ReloadBatchCommand).RaiseCanExecuteChanged();
+        RefreshCommands();
+    }
+
+    private void RefreshCommands()
+    {
+        ((RelayCommand)MoveUpCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)MoveDownCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)RemoveFromBatchCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)RenameFileCommand).RaiseCanExecuteChanged();
     }
 
     private static string? ToExistingDirectory(string path) =>
