@@ -3,6 +3,7 @@ using System.Windows.Threading;
 using Microsoft.Extensions.Logging;
 using ReportLogBatcher.App.Services;
 using ReportLogBatcher.App.ViewModels;
+using ReportLogBatcher.Core.Services;
 
 namespace ReportLogBatcher.App;
 
@@ -29,6 +30,7 @@ public partial class App : Application
             var viewModel = new MainWindowViewModel(
                 new FileDialogService(),
                 settings,
+                new BatchDiscoveryService(),
                 _loggerFactory);
 
             MainWindow = new MainWindow { DataContext = viewModel };

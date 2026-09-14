@@ -45,7 +45,7 @@ A ReportRecord containing a blank required field MUST NOT reach the renderer/wri
 - C# (.NET 10)
 - Windows desktop application
 - WPF (MVVM)
-- Open XML SDK (DocumentFormat.OpenXml)
+- Open XML SDK (DocumentFormat.OpenXml) — reserved for later Word-processing slices only
 - System.IO.Path / System.IO.Directory
 - xUnit
 - Microsoft.Extensions.Logging (or built-in logging)

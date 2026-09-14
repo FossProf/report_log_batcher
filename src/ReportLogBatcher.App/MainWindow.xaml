@@ -83,18 +83,63 @@
                   Padding="10">
             <Grid>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
+
                 <TextBlock Grid.Row="0"
-                           Text="No reports yet."
+                           Margin="0,0,0,8"
+                           FontWeight="SemiBold"
+                           Text="{Binding BatchCount, StringFormat=Reports: {0}}" />
+
+                <ListView Grid.Row="1"
+                          ItemsSource="{Binding BatchEntries}"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          BorderThickness="1"
+                          BorderBrush="#CCCCCC">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="#"
+                                            Width="48"
+                                            DisplayMemberBinding="{Binding Sequence}" />
+                            <GridViewColumn Width="Auto"
+                                            Header="File">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding FileName}"
+                                                   ToolTip="{Binding FullPath}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Status"
+                                            Width="90"
+                                            DisplayMemberBinding="{Binding Status}" />
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+
+                <TextBlock Grid.Row="2"
+                           Margin="0,8,0,0"
                            Foreground="Gray"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center" />
-                <Button Grid.Row="1"
+                           TextWrapping="Wrap"
+                           Text="{Binding BatchEmptyMessage}" />
+
+                <TextBlock Grid.Row="3"
+                           Margin="0,8,0,0"
+                           Foreground="#C0392B"
+                           TextWrapping="Wrap"
+                           Text="{Binding BatchError}" />
+
+                <Button Grid.Row="4"
                         Content="Build Batch"
                         Width="120"
                         Height="28"
+                        Margin="0,8,0,0"
                         HorizontalAlignment="Right"
                         AutomationProperties.Name="Build Batch"
                         Command="{Binding BuildBatchCommand}" />

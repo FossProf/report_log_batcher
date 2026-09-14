@@ -1,8 +1,10 @@
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows.Input;
 using Microsoft.Extensions.Logging;
 using ReportLogBatcher.App.Commands;
 using ReportLogBatcher.App.Services;
+using ReportLogBatcher.Core.Models;
 using ReportLogBatcher.Core.Services;
 
 namespace ReportLogBatcher.App.ViewModels;
@@ -11,22 +13,28 @@ public sealed class MainWindowViewModel : ObservableObject
 {
     private readonly IFileDialogService _dialogService;
     private readonly SettingsService _settings;
+    private readonly BatchDiscoveryService _discoveryService;
     private readonly ILogger _logger;
 
     private string _reportLogPath = string.Empty;
     private string _reportsDirectoryPath = string.Empty;
     private string? _reportLogError;
     private string? _reportsDirectoryError;
+    private string? _batchEmptyMessage;
+    private string? _batchError;
+    private int _batchCount;
     private PathValidationResult? _reportLogValidation;
     private PathValidationResult? _reportsDirectoryValidation;
 
     public MainWindowViewModel(
         IFileDialogService dialogService,
         SettingsService settingsService,
+        BatchDiscoveryService discoveryService,
         ILoggerFactory loggerFactory)
     {
         _dialogService = dialogService;
         _settings = settingsService;
+        _discoveryService = discoveryService;
         _logger = loggerFactory.CreateLogger<MainWindowViewModel>();
 
         BrowseReportLogCommand = new RelayCommand(BrowseReportLog);
@@ -62,6 +70,26 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public bool CanBuildBatch =>
         _reportLogValidation?.IsValid == true && _reportsDirectoryValidation?.IsValid == true;
+
+    public ObservableCollection<BatchEntryRow> BatchEntries { get; } = new();
+
+    public int BatchCount
+    {
+        get => _batchCount;
+        private set => SetProperty(ref _batchCount, value);
+    }
+
+    public string? BatchEmptyMessage
+    {
+        get => _batchEmptyMessage;
+        private set => SetProperty(ref _batchEmptyMessage, value);
+    }
+
+    public string? BatchError
+    {
+        get => _batchError;
+        private set => SetProperty(ref _batchError, value);
+    }
 
     public ICommand BrowseReportLogCommand { get; }
 
@@ -106,6 +134,7 @@ public sealed class MainWindowViewModel : ObservableObject
         }
 
         RefreshBuildState();
+        ClearBatchUi();
     }
 
     private void ApplyReportsDirectorySelection(string path)
@@ -126,12 +155,59 @@ public sealed class MainWindowViewModel : ObservableObject
         }
 
         RefreshBuildState();
+        ClearBatchUi();
     }
 
     private void OnBuildBatch()
     {
-        // Batch building is a later slice; nothing to do here yet.
-        _logger.LogInformation("Build Batch invoked, but no batch operation is implemented yet.");
+        var reportLogValidation = PathValidationService.ValidateReportLog(_reportLogPath);
+        var reportsDirectoryValidation = PathValidationService.ValidateReportsDirectory(_reportsDirectoryPath);
+
+        if (!reportLogValidation.IsValid || !reportsDirectoryValidation.IsValid)
+        {
+            _logger.LogWarning(
+                "Build Batch rejected: report log valid = {ReportLogValid}, reports directory valid = {ReportsDirectoryValid}",
+                reportLogValidation.IsValid,
+                reportsDirectoryValidation.IsValid);
+
+            ClearBatchUi();
+            BatchError = "The selected report log or reports directory is no longer valid. Re-select both and try again.";
+            return;
+        }
+
+        try
+        {
+            ClearBatchUi();
+
+            var entries = _discoveryService.Discover(_reportsDirectoryPath);
+
+            var sequence = 1;
+            foreach (var entry in entries)
+            {
+                BatchEntries.Add(new BatchEntryRow(entry, sequence));
+                sequence++;
+            }
+
+            BatchCount = BatchEntries.Count;
+            if (BatchCount == 0)
+                BatchEmptyMessage = "No .docx reports were found in the selected directory.";
+
+            _logger.LogInformation("Batch built with {Count} reports from {Directory}", BatchCount, _reportsDirectoryPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Batch discovery failed for {Directory}.", _reportsDirectoryPath);
+            ClearBatchUi();
+            BatchError = "Could not read the selected reports directory. See the application logs for details.";
+        }
+    }
+
+    private void ClearBatchUi()
+    {
+        BatchEntries.Clear();
+        BatchCount = 0;
+        BatchEmptyMessage = null;
+        BatchError = null;
     }
 
     private void RestoreStoredSelections()
