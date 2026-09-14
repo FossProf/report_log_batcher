@@ -28,4 +28,18 @@ public static class PathValidationService
 
         return new PathValidationResult(true, null);
     }
+
+    public static PathValidationResult ValidateReportLogTemplate(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return new PathValidationResult(false, null);
+
+        if (!File.Exists(path))
+            return new PathValidationResult(false, "The selected report-log template does not exist.");
+
+        if (!string.Equals(Path.GetExtension(path), ".docx", StringComparison.OrdinalIgnoreCase))
+            return new PathValidationResult(false, "The report-log template must be a .docx file.");
+
+        return new PathValidationResult(true, null);
+    }
 }

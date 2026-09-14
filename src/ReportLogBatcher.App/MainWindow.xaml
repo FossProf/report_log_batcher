@@ -11,6 +11,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -77,8 +78,49 @@
             </StackPanel>
         </GroupBox>
 
-        <!-- Batch Area -->
+        <!-- Report Log Template -->
         <GroupBox Grid.Row="2"
+                  Header="Report Log Template"
+                  Padding="10"
+                  Margin="0,0,0,12">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0"
+                             VerticalContentAlignment="Center"
+                             Height="26"
+                             IsReadOnly="True"
+                             AutomationProperties.Name="Report log template path"
+                             Text="{Binding ReportLogTemplatePath, Mode=OneWay}" />
+                    <Button Grid.Column="1"
+                            Content="Browse..."
+                            Width="96"
+                            Margin="8,0,0,0"
+                            AutomationProperties.Name="Browse for report log template"
+                            Command="{Binding BrowseReportLogTemplateCommand}" />
+                </Grid>
+                <TextBlock Margin="0,6,0,0"
+                           TextWrapping="Wrap">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="#2E7D32" />
+                            <Setter Property="Text" Value="{Binding TemplateStatus}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding TemplateStatusIsError}" Value="True">
+                                    <Setter Property="Foreground" Value="#C0392B" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Batch Area -->
+        <GroupBox Grid.Row="3"
                   Header="Batch"
                   Padding="10">
             <Grid>

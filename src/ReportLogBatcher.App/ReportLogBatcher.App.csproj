@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ReportLogBatcher.Core\ReportLogBatcher.Core.csproj" />
+    <ProjectReference Include="..\ReportLogBatcher.Infrastructure\ReportLogBatcher.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

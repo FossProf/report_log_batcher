@@ -21,6 +21,8 @@ public sealed class SettingsService
 
     public string? StoredReportsDirectory => _data.ReportsDirectoryPath;
 
+    public string? StoredReportLogTemplatePath => _data.ReportLogTemplatePath;
+
     public void Load()
     {
         try
@@ -49,6 +51,12 @@ public sealed class SettingsService
         Save();
     }
 
+    public void SaveReportLogTemplatePath(string path)
+    {
+        _data.ReportLogTemplatePath = path;
+        Save();
+    }
+
     private void Save()
     {
         try
@@ -71,5 +79,6 @@ public sealed class SettingsService
     {
         public string? ReportLogPath { get; set; }
         public string? ReportsDirectoryPath { get; set; }
+        public string? ReportLogTemplatePath { get; set; }
     }
 }

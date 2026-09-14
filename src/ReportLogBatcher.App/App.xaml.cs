@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using ReportLogBatcher.App.Services;
 using ReportLogBatcher.App.ViewModels;
 using ReportLogBatcher.Core.Services;
+using ReportLogBatcher.Infrastructure.Word;
 
 namespace ReportLogBatcher.App;
 
@@ -33,6 +34,7 @@ public partial class App : Application
                 new BatchDiscoveryService(),
                 new BatchFileService(),
                 new RenameFileDialogService(),
+                new TemplateInspectionService(),
                 _loggerFactory);
 
             MainWindow = new MainWindow { DataContext = viewModel };

@@ -7,6 +7,7 @@ public interface IFileDialogService
 {
     string? PickReportLogFile(string? initialDirectory = null);
     string? PickReportsDirectory(string? initialDirectory = null);
+    string? PickReportLogTemplate(string? initialDirectory = null);
 }
 
 public sealed class FileDialogService : IFileDialogService
@@ -39,5 +40,22 @@ public sealed class FileDialogService : IFileDialogService
             dialog.InitialDirectory = initialDirectory;
 
         return dialog.ShowDialog() == true ? dialog.FolderName : null;
+    }
+
+    public string? PickReportLogTemplate(string? initialDirectory = null)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Select Report Log Template",
+            Filter = "Word Documents (*.docx)|*.docx",
+            DefaultExt = "docx",
+            AddExtension = true,
+            CheckFileExists = true,
+        };
+
+        if (!string.IsNullOrWhiteSpace(initialDirectory) && Directory.Exists(initialDirectory))
+            dialog.InitialDirectory = initialDirectory;
+
+        return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
 }

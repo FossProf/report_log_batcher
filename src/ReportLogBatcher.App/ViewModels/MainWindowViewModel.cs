@@ -16,19 +16,24 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly BatchDiscoveryService _discoveryService;
     private readonly BatchFileService _fileService;
     private readonly IRenameFileDialogService _renameDialogService;
+    private readonly ITemplateInspectionService _templateInspectionService;
     private readonly ILogger _logger;
     private readonly StagedBatch _stagedBatch = new();
 
     private string _reportLogPath = string.Empty;
     private string _reportsDirectoryPath = string.Empty;
+    private string _templatePath = string.Empty;
     private string? _reportLogError;
     private string? _reportsDirectoryError;
+    private string? _templateStatus;
+    private bool _templateStatusIsError;
     private string? _batchEmptyMessage;
     private string? _batchError;
     private int _batchCount;
     private BatchEntryRow? _selectedRow;
     private PathValidationResult? _reportLogValidation;
     private PathValidationResult? _reportsDirectoryValidation;
+    private TemplateValidationResult? _templateValidation;
 
     public MainWindowViewModel(
         IFileDialogService dialogService,
@@ -36,6 +41,7 @@ public sealed class MainWindowViewModel : ObservableObject
         BatchDiscoveryService discoveryService,
         BatchFileService fileService,
         IRenameFileDialogService renameDialogService,
+        ITemplateInspectionService templateInspectionService,
         ILoggerFactory loggerFactory)
     {
         _dialogService = dialogService;
@@ -43,10 +49,12 @@ public sealed class MainWindowViewModel : ObservableObject
         _discoveryService = discoveryService;
         _fileService = fileService;
         _renameDialogService = renameDialogService;
+        _templateInspectionService = templateInspectionService;
         _logger = loggerFactory.CreateLogger<MainWindowViewModel>();
 
         BrowseReportLogCommand = new RelayCommand(BrowseReportLog);
         BrowseReportsDirectoryCommand = new RelayCommand(BrowseReportsDirectory);
+        BrowseReportLogTemplateCommand = new RelayCommand(BrowseReportLogTemplate);
         BuildBatchCommand = new RelayCommand(OnBuildBatch, () => CanBuildBatch);
         MoveUpCommand = new RelayCommand(OnMoveUp, () => CanMoveUp);
         MoveDownCommand = new RelayCommand(OnMoveDown, () => CanMoveDown);
@@ -69,6 +77,24 @@ public sealed class MainWindowViewModel : ObservableObject
         private set => SetProperty(ref _reportsDirectoryPath, value);
     }
 
+    public string ReportLogTemplatePath
+    {
+        get => _templatePath;
+        private set => SetProperty(ref _templatePath, value);
+    }
+
+    public string? TemplateStatus
+    {
+        get => _templateStatus;
+        private set => SetProperty(ref _templateStatus, value);
+    }
+
+    public bool TemplateStatusIsError
+    {
+        get => _templateStatusIsError;
+        private set => SetProperty(ref _templateStatusIsError, value);
+    }
+
     public string? ReportLogError
     {
         get => _reportLogError;
@@ -82,7 +108,9 @@ public sealed class MainWindowViewModel : ObservableObject
     }
 
     public bool CanBuildBatch =>
-        _reportLogValidation?.IsValid == true && _reportsDirectoryValidation?.IsValid == true;
+        _reportLogValidation?.IsValid == true &&
+        _reportsDirectoryValidation?.IsValid == true &&
+        _templateValidation?.IsValid == true;
 
     public bool CanReloadBatch =>
         _reportsDirectoryValidation?.IsValid == true;
@@ -120,6 +148,8 @@ public sealed class MainWindowViewModel : ObservableObject
     public ICommand BrowseReportLogCommand { get; }
 
     public ICommand BrowseReportsDirectoryCommand { get; }
+
+    public ICommand BrowseReportLogTemplateCommand { get; }
 
     public ICommand BuildBatchCommand { get; }
 
@@ -172,6 +202,15 @@ public sealed class MainWindowViewModel : ObservableObject
         ApplyReportsDirectorySelection(selected);
     }
 
+    private void BrowseReportLogTemplate()
+    {
+        var selected = _dialogService.PickReportLogTemplate(ToExistingDirectory(_templatePath));
+        if (selected is null)
+            return;
+
+        ApplyReportLogTemplateSelection(selected);
+    }
+
     private void ApplyReportLogSelection(string path)
     {
         ReportLogPath = path;
@@ -214,20 +253,83 @@ public sealed class MainWindowViewModel : ObservableObject
         ClearBatchUi();
     }
 
+    private void ApplyReportLogTemplateSelection(string path)
+    {
+        ReportLogTemplatePath = path;
+
+        var pathValidation = PathValidationService.ValidateReportLogTemplate(path);
+        if (!pathValidation.IsValid)
+        {
+            _templateValidation = null;
+            TemplateStatus = pathValidation.ErrorMessage;
+            TemplateStatusIsError = true;
+            _logger.LogWarning("Invalid report-log template selection {Path}: {Message}", path, TemplateStatus);
+        }
+        else
+        {
+            _templateValidation = _templateInspectionService.Inspect(path);
+            ApplyTemplateValidationStatus();
+            _settings.SaveReportLogTemplatePath(path);
+
+            if (_templateValidation.IsValid)
+                _logger.LogInformation("Report-log template accepted: {Path}", path);
+            else
+                _logger.LogWarning("Report-log template failed inspection {Path}: {Issues}",
+                    path, string.Join("; ", (_templateValidation.Issues ?? []).Select(i => i.Message)));
+        }
+
+        RefreshBuildState();
+        ClearBatchUi();
+    }
+
+    private void ApplyTemplateValidationStatus()
+    {
+        if (_templateValidation is null)
+        {
+            TemplateStatus = null;
+            TemplateStatusIsError = false;
+            return;
+        }
+
+        if (_templateValidation.IsValid)
+        {
+            TemplateStatus = "Template valid";
+            TemplateStatusIsError = false;
+            return;
+        }
+
+        if (_templateValidation.Failure != TemplateValidationFailure.None)
+        {
+            TemplateStatus = _templateValidation.ErrorMessage;
+            TemplateStatusIsError = true;
+            return;
+        }
+
+        var issues = _templateValidation.Issues ?? Array.Empty<TemplateIssue>();
+        var summary = issues.Count > 0 ? issues[0].Message : "the template does not match the expected contract.";
+        if (issues.Count > 1)
+            summary += $" (+{issues.Count - 1} more issue{(issues.Count - 1 == 1 ? string.Empty : "s")})";
+
+        TemplateStatus = $"Template invalid: {summary}";
+        TemplateStatusIsError = true;
+    }
+
     private void OnBuildBatch()
     {
         var reportLogValidation = PathValidationService.ValidateReportLog(_reportLogPath);
         var reportsDirectoryValidation = PathValidationService.ValidateReportsDirectory(_reportsDirectoryPath);
+        var templateValidation = _templateValidation?.IsValid == true;
 
-        if (!reportLogValidation.IsValid || !reportsDirectoryValidation.IsValid)
+        if (!reportLogValidation.IsValid || !reportsDirectoryValidation.IsValid || !templateValidation)
         {
             _logger.LogWarning(
-                "Build Batch rejected: report log valid = {ReportLogValid}, reports directory valid = {ReportsDirectoryValid}",
+                "Build Batch rejected: report log valid = {ReportLogValid}, reports directory valid = {ReportsDirectoryValid}, template valid = {TemplateValid}",
                 reportLogValidation.IsValid,
-                reportsDirectoryValidation.IsValid);
+                reportsDirectoryValidation.IsValid,
+                templateValidation);
 
             ClearBatchUi();
-            BatchError = "The selected report log or reports directory is no longer valid. Re-select both and try again.";
+            BatchError = "The selected report log, reports directory, or report-log template is no longer valid. Re-select all three and try again.";
             return;
         }
 
@@ -428,6 +530,27 @@ public sealed class MainWindowViewModel : ObservableObject
             else
             {
                 _logger.LogInformation("Ignored stored reports directory (no longer valid): {Path}", storedDirectory);
+            }
+        }
+
+        var storedTemplate = _settings.StoredReportLogTemplatePath;
+        if (!string.IsNullOrWhiteSpace(storedTemplate))
+        {
+            var pathValidation = PathValidationService.ValidateReportLogTemplate(storedTemplate);
+            if (pathValidation.IsValid)
+            {
+                _templatePath = storedTemplate;
+                _templateValidation = _templateInspectionService.Inspect(storedTemplate);
+                OnPropertyChanged(nameof(ReportLogTemplatePath));
+                ApplyTemplateValidationStatus();
+                _logger.LogInformation(
+                    "Restored report-log template path: {Path} (valid = {TemplateValid})",
+                    storedTemplate,
+                    _templateValidation.IsValid);
+            }
+            else
+            {
+                _logger.LogInformation("Ignored stored report-log template (no longer valid): {Path}", storedTemplate);
             }
         }
 
