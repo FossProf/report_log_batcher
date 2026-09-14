@@ -159,6 +159,12 @@
                             Margin="0,0,6,0"
                             AutomationProperties.Name="Rename selected report"
                             Command="{Binding RenameFileCommand}" />
+                    <Button Content="Preview Parse"
+                            MinWidth="90"
+                            Padding="8,3"
+                            Margin="0,0,6,0"
+                            AutomationProperties.Name="Preview parsed report"
+                            Command="{Binding PreviewParseCommand}" />
                     <Button Content="Remove from Batch"
                             MinWidth="120"
                             Padding="8,3"

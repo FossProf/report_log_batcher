@@ -1,0 +1,101 @@
+<Window x:Class="ReportLogBatcher.App.Dialogs.ParsePreviewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Parse Preview"
+        Width="680"
+        Height="560"
+        MinWidth="560"
+        MinHeight="440"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        KeyDown="OnWindowKeyDown">
+    <Window.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="16">
+                <TextBlock Text="Parse Preview (read-only)"
+                           FontSize="16"
+                           FontWeight="SemiBold" />
+                <TextBlock Text="Staged reports are never modified by previewing."
+                           Foreground="Gray"
+                           Margin="0,2,0,12" />
+
+                <TextBlock Text="Source Report:"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="SourceFileText"
+                           Margin="0,0,0,10" />
+
+                <TextBlock Text="Parse Status:"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="StatusText"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,12" />
+
+                <TextBlock Text="Report Number:"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="ReportNumberText"
+                           Margin="0,0,0,10" />
+
+                <TextBlock Text="Inspection Date (mm/dd/yy):"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="InspectionDateText"
+                           Margin="0,0,0,10" />
+
+                <TextBlock Text="Inspector First Name:"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="InspectorFirstNameText"
+                           Margin="0,0,0,10" />
+
+                <TextBlock Text="Description and Location(s) of Work Inspected:"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="DescriptionOfWorkText"
+                           Margin="0,0,0,10" />
+
+                <TextBlock Text="Drawing Sheets and Sections Related to This Work:"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="DrawingReferencesText"
+                           Margin="0,0,0,10" />
+
+                <TextBlock Text="General Observations/Remarks:"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="GeneralObservationsText"
+                           Margin="0,0,0,10" />
+
+                <TextBlock Text="Discrepancies and Direction Given:"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="DiscrepanciesText"
+                           Margin="0,0,0,10" />
+
+                <TextBlock Text="Observations/Remarks on Correction of Previous Discrepancies:"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="PreviousDiscrepancyCorrectionsText"
+                           Margin="0,0,0,12" />
+
+                <TextBlock Text="Diagnostics:"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="DiagnosticsText"
+                           Margin="0,2,0,0" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <Button Grid.Row="1"
+                Content="Close"
+                Width="90"
+                Height="28"
+                Margin="0,8,0,0"
+                HorizontalAlignment="Right"
+                IsCancel="True"
+                Click="OnCloseClicked" />
+    </Grid>
+</Window>

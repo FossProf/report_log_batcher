@@ -15,7 +15,9 @@ Before processing, the user can reorder the batch, rename files, or remove files
 
 After verification, reports are processed sequentially.
 
-Each report is parsed into a structured record containing all fields required by the report-log template. Missing/unreliable fields require manual resolution before processing continues. Blank required fields are prohibited; `N/A` is the fallback value.
+Each report is parsed into a structured record containing all fields required by the report-log template. A deterministic parser extracts the certified fields from the SPIN document's title, header table, and five canonical narrative sections, preserving source wording verbatim (including typos). Structural ambiguity, missing structure, and unparsable values are surfaced as diagnostics; unresolved fields are reported in a read-only preview.
+
+Missing/unreliable fields require manual resolution before processing continues. Blank required fields are prohibited; `N/A` is the fallback value.
 
 Validated records are rendered through the Word template and appended to the selected master report log in staged order.
 

@@ -35,6 +35,7 @@ public partial class App : Application
                 new BatchFileService(),
                 new RenameFileDialogService(),
                 new TemplateInspectionService(),
+                new ParsePreviewService(new SpinReportParser(), _loggerFactory),
                 _loggerFactory);
 
             MainWindow = new MainWindow { DataContext = viewModel };
