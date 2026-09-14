@@ -42,12 +42,12 @@ A ReportRecord containing a blank required field MUST NOT reach the renderer/wri
 
 ## Technology
 
-- C# (.NET 8+)
+- C# (.NET 10)
 - Windows desktop application
 - WPF (MVVM)
 - Open XML SDK (DocumentFormat.OpenXml)
 - System.IO.Path / System.IO.Directory
-- NUnit
+- xUnit
 - Microsoft.Extensions.Logging (or built-in logging)
 
 Do not introduce another GUI framework or Word-processing library without explicit approval.
