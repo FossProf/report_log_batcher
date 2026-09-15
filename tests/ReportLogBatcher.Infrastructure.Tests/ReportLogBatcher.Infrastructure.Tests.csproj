@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\ReportLogBatcher.Core\ReportLogBatcher.Core.csproj" />
     <ProjectReference Include="..\..\src\ReportLogBatcher.Infrastructure\ReportLogBatcher.Infrastructure.csproj" />
   </ItemGroup>
 

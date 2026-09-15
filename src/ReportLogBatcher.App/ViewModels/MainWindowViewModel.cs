@@ -18,6 +18,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly IRenameFileDialogService _renameDialogService;
     private readonly ITemplateInspectionService _templateInspectionService;
     private readonly IParsePreviewService _previewParseService;
+    private readonly IReportReviewService _reviewService;
     private readonly ILogger _logger;
     private readonly StagedBatch _stagedBatch = new();
 
@@ -44,6 +45,7 @@ public sealed class MainWindowViewModel : ObservableObject
         IRenameFileDialogService renameDialogService,
         ITemplateInspectionService templateInspectionService,
         IParsePreviewService previewParseService,
+        IReportReviewService reviewService,
         ILoggerFactory loggerFactory)
     {
         _dialogService = dialogService;
@@ -53,6 +55,7 @@ public sealed class MainWindowViewModel : ObservableObject
         _renameDialogService = renameDialogService;
         _templateInspectionService = templateInspectionService;
         _previewParseService = previewParseService;
+        _reviewService = reviewService;
         _logger = loggerFactory.CreateLogger<MainWindowViewModel>();
 
         BrowseReportLogCommand = new RelayCommand(BrowseReportLog);
@@ -64,6 +67,7 @@ public sealed class MainWindowViewModel : ObservableObject
         RemoveFromBatchCommand = new RelayCommand(OnRemoveFromBatch, () => SelectedRow is not null);
         RenameFileCommand = new RelayCommand(OnRenameFile, () => SelectedRow is not null);
         PreviewParseCommand = new RelayCommand(OnPreviewParse, () => SelectedRow is not null);
+        ReviewRecordCommand = new RelayCommand(OnReviewRecord, () => SelectedRow is not null);
         ReloadBatchCommand = new RelayCommand(OnReloadBatch, () => CanReloadBatch);
 
         RestoreStoredSelections();
@@ -166,6 +170,8 @@ public sealed class MainWindowViewModel : ObservableObject
     public ICommand RenameFileCommand { get; }
 
     public ICommand PreviewParseCommand { get; }
+
+    public ICommand ReviewRecordCommand { get; }
 
     public ICommand ReloadBatchCommand { get; }
 
@@ -457,6 +463,16 @@ public sealed class MainWindowViewModel : ObservableObject
         _previewParseService.Show(entry.FullPath);
     }
 
+    private void OnReviewRecord()
+    {
+        var index = SelectedIndex;
+        if (index < 0)
+            return;
+
+        var entry = _stagedBatch.Entries[index];
+        _reviewService.Review(entry.FullPath);
+    }
+
     private void OnReloadBatch()
     {
         try
@@ -589,6 +605,7 @@ public sealed class MainWindowViewModel : ObservableObject
         ((RelayCommand)RemoveFromBatchCommand).RaiseCanExecuteChanged();
         ((RelayCommand)RenameFileCommand).RaiseCanExecuteChanged();
         ((RelayCommand)PreviewParseCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)ReviewRecordCommand).RaiseCanExecuteChanged();
     }
 
     private static string? ToExistingDirectory(string path) =>

@@ -19,6 +19,8 @@ Each report is parsed into a structured record containing all fields required by
 
 Missing/unreliable fields require manual resolution before processing continues. Blank required fields are prohibited; `N/A` is the fallback value.
 
+The "Review Record" action (after verifying the staging batch) opens every selected report in an editable resolution dialog: all eight parsed fields can be corrected, unresolved fields are flagged, and the Inspection Date demands a valid date. Blank required fields become `N/A` only at approval. The approved record is validated into an immutable `ValidatedReportRecord` and shown in a read-only Approved Record Preview; reviewing never modifies the source SPIN and never writes to any Word document.
+
 Validated records are rendered through the Word template and appended to the selected master report log in staged order.
 
 ## Processing pipeline

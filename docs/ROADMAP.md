@@ -47,11 +47,23 @@ Supported production contract (narrow on purpose; verified against Special Inspe
   unreadable document => Failed (DocumentError). Unresolved fields stay null for the resolver.
 - Parsing opens reports read-only and never modifies them.
 
-## Slice 6 — Validation + Manual Resolution
-Validate every required field.
-Pause for unresolved values.
-Manual-entry modal.
-Default unresolved blank input to `N/A`.
+## Slice 6 — Validation + Manual Resolution + Approved Record Preview
+Core required-field validation (all eight fields, no WPF/Open XML):
+- String fields invalid when null, "", or whitespace-only; literal `N/A` valid; validation never rewrites values.
+- `InspectionDate` stays a typed `DateOnly?`; missing date is invalid (no invented "today", no filename guess).
+- Structured result reports ALL missing fields, not just the first.
+
+Manual resolution:
+- "Review Record" command opens an editable modal for the selected staged report (all eight fields; unresolved fields visually flagged).
+- Edits live only in an in-memory working copy; the parser's original `ReportRecord` is never mutated and the source SPIN is never written.
+- Blank required STRING fields become `N/A` ONLY at approval, after the user has seen the resolution dialog; a blank/unparsable Inspection Date blocks approval.
+- Cancel discards everything; nothing is persisted or written to any Word document.
+
+Approved record:
+- `ValidatedReportRecord` has a private constructor and is produced only after a passing validation run, so an incomplete record can never reach the renderer/writer.
+- `ReportResolutionResult` tracks manual edits vs `N/A` fallbacks separately (source `N/A` is never classified as a fallback) and preserves parser diagnostics.
+- Read-only "Approved Record Preview" shows the exact header (`Report #NNN – mm/dd/yy – first name`), the five contract body sections, and resolution metadata.
+- No Word rendering, no master-log append, no persistence of approvals. Reviewed records are endpoint-of-slice only.
 
 ## Slice 7 — Batch Processor
 Sequential processing in staged order.

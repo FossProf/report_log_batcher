@@ -699,4 +699,55 @@ public sealed class SpinReportParserTests : IDisposable
         Assert.NotNull(result.Record);
         Assert.True(result.Record.HasAnyUnresolved);
     }
+
+    // ---- Manual resolution path (generated missing-section fixture) --------------
+
+    [Fact]
+    public void MissingDrawingSection_ResolutionBlankBecomesNaFallback()
+    {
+        var path = _factory.Create("missing-drawing.docx", doc =>
+        {
+            doc.Paragraph("Special Inspection Report #319");
+            doc.Table(
+                ["Project Name:", "X", "Inspection Date:", "2026-09-11"],
+                ["Cornerstone Inspector(s):", "Anthony Wintergerst"]);
+            doc.Paragraph(ReportTemplateContract.DescriptionOfWorkHeading);
+            doc.Paragraph("Description body text.");
+            // Drawing references section omitted entirely.
+            doc.Paragraph(ReportTemplateContract.GeneralObservationsHeading);
+            doc.Paragraph("Observation text.");
+            doc.Paragraph(ReportTemplateContract.DiscrepanciesHeading);
+            doc.Paragraph("N/A");
+            doc.Paragraph(ReportTemplateContract.PreviousDiscrepancyCorrectionsHeading);
+            doc.Paragraph("Corrections body text.");
+        });
+
+        var result = _parser.Parse(path);
+
+        Assert.Equal(SpinParseStatus.ParsedWithUnresolvedFields, result.Status);
+        Assert.Equal(1, result.UnresolvedFieldCount);
+        Assert.Null(result.Record.DrawingReferences);
+        AssertIssue(result, ParseIssueKind.Missing, ReportField.DrawingReferences);
+
+        var edited = new Dictionary<ReportField, string?>
+        {
+            [ReportField.ReportNumber] = result.Record.ReportNumber,
+            [ReportField.InspectionDate] = result.Record.InspectionDate?.ToString("MM/dd/yyyy"),
+            [ReportField.InspectorFirstName] = result.Record.InspectorFirstName,
+            [ReportField.DescriptionOfWork] = result.Record.DescriptionOfWork,
+            [ReportField.DrawingReferences] = string.Empty,
+            [ReportField.GeneralObservations] = result.Record.GeneralObservations,
+            [ReportField.Discrepancies] = result.Record.Discrepancies,
+            [ReportField.PreviousDiscrepancyCorrections] = result.Record.PreviousDiscrepancyCorrections,
+        };
+
+        var resolver = new ReportRecordResolver(new ReportRecordValidator());
+        var resolution = resolver.Resolve(result.Record, edited, result.Issues);
+
+        Assert.True(resolution.IsApproved);
+        Assert.Equal("N/A", resolution.ValidatedRecord!.DrawingReferences);
+        Assert.Equal(new[] { ReportField.DrawingReferences }, resolution.NaFallbackFields);
+        Assert.Empty(resolution.ManuallyEditedFields);
+        Assert.Same(result.Issues, resolution.ParserIssues);
+    }
 }

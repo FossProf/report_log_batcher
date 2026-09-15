@@ -1,0 +1,83 @@
+<Window x:Class="ReportLogBatcher.App.Dialogs.ApprovedRecordPreviewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Approved Record Preview"
+        Width="760"
+        Height="620"
+        MinWidth="600"
+        MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        KeyDown="OnWindowKeyDown">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="16">
+                <TextBlock Text="Approved Record Preview"
+                           FontSize="16"
+                           FontWeight="SemiBold" />
+                <TextBlock Text="Validated record, ready for the report log. Nothing has been written to any Word document."
+                           Foreground="Gray"
+                           TextWrapping="Wrap"
+                           Margin="0,2,0,12" />
+
+                <TextBlock x:Name="HeaderText"
+                           FontSize="15"
+                           FontWeight="Bold"
+                           Margin="0,0,0,14" />
+
+                <TextBlock x:Name="DescriptionOfWorkHeading"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="DescriptionOfWorkValue"
+                           Margin="0,0,0,10" />
+
+                <TextBlock x:Name="DrawingReferencesHeading"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="DrawingReferencesValue"
+                           Margin="0,0,0,10" />
+
+                <TextBlock x:Name="GeneralObservationsHeading"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="GeneralObservationsValue"
+                           Margin="0,0,0,10" />
+
+                <TextBlock x:Name="DiscrepanciesHeading"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="DiscrepanciesValue"
+                           Margin="0,0,0,10" />
+
+                <TextBlock x:Name="PreviousDiscrepancyCorrectionsHeading"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="PreviousDiscrepancyCorrectionsValue"
+                           Margin="0,0,0,14" />
+
+                <Separator Margin="0,0,0,10" />
+
+                <TextBlock Text="Resolution metadata"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="ManualChangesText"
+                           Margin="0,2,0,4" />
+                <TextBlock x:Name="NaFallbackText"
+                           Margin="0,0,0,4" />
+                <TextBlock x:Name="ParserIssuesText"
+                           Foreground="Gray" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <Button Grid.Row="1"
+                Content="OK"
+                Width="90"
+                Height="28"
+                Margin="0,8,0,0"
+                HorizontalAlignment="Right"
+                IsDefault="True"
+                IsCancel="True"
+                Click="OnCloseClicked" />
+    </Grid>
+</Window>

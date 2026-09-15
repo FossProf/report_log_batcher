@@ -173,45 +173,52 @@
                            FontWeight="SemiBold"
                            Text="{Binding BatchCount, StringFormat=Reports: {0}}" />
 
-                <StackPanel Grid.Row="1"
-                            Orientation="Horizontal"
-                            Margin="0,0,0,8">
+<WrapPanel Grid.Row="1"
+                           Orientation="Horizontal"
+                           Margin="0,0,0,8">
                     <Button Content="Move Up"
                             MinWidth="76"
                             Padding="8,3"
-                            Margin="0,0,6,0"
+                            Margin="0,0,6,4"
                             AutomationProperties.Name="Move selected report up"
                             Command="{Binding MoveUpCommand}" />
                     <Button Content="Move Down"
                             MinWidth="76"
                             Padding="8,3"
-                            Margin="0,0,6,0"
+                            Margin="0,0,6,4"
                             AutomationProperties.Name="Move selected report down"
                             Command="{Binding MoveDownCommand}" />
                     <Button Content="Rename File"
                             MinWidth="90"
                             Padding="8,3"
-                            Margin="0,0,6,0"
+                            Margin="0,0,6,4"
                             AutomationProperties.Name="Rename selected report"
                             Command="{Binding RenameFileCommand}" />
                     <Button Content="Preview Parse"
                             MinWidth="90"
                             Padding="8,3"
-                            Margin="0,0,6,0"
+                            Margin="0,0,6,4"
                             AutomationProperties.Name="Preview parsed report"
                             Command="{Binding PreviewParseCommand}" />
+                    <Button Content="Review Record"
+                            MinWidth="100"
+                            Padding="8,3"
+                            Margin="0,0,6,4"
+                            AutomationProperties.Name="Review and approve selected report record"
+                            Command="{Binding ReviewRecordCommand}" />
                     <Button Content="Remove from Batch"
                             MinWidth="120"
                             Padding="8,3"
-                            Margin="0,0,6,0"
+                            Margin="0,0,6,4"
                             AutomationProperties.Name="Remove selected report from batch"
                             Command="{Binding RemoveFromBatchCommand}" />
                     <Button Content="Reload Batch"
                             MinWidth="90"
                             Padding="8,3"
+                            Margin="0,0,6,4"
                             AutomationProperties.Name="Reload batch from reports directory"
                             Command="{Binding ReloadBatchCommand}" />
-                </StackPanel>
+                </WrapPanel>
 
                 <ListView Grid.Row="2"
                           ItemsSource="{Binding BatchEntries}"

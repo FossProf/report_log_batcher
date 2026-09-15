@@ -28,6 +28,9 @@ public partial class App : Application
             var settings = new SettingsService();
             settings.Load();
 
+            var validator = new ReportRecordValidator();
+            var reportParser = new SpinReportParser();
+
             var viewModel = new MainWindowViewModel(
                 new FileDialogService(),
                 settings,
@@ -35,7 +38,8 @@ public partial class App : Application
                 new BatchFileService(),
                 new RenameFileDialogService(),
                 new TemplateInspectionService(),
-                new ParsePreviewService(new SpinReportParser(), _loggerFactory),
+                new ParsePreviewService(reportParser, _loggerFactory),
+                new ReportReviewService(reportParser, new ReportRecordResolver(validator), _loggerFactory),
                 _loggerFactory);
 
             MainWindow = new MainWindow { DataContext = viewModel };
