@@ -21,7 +21,7 @@ Missing/unreliable fields require manual resolution before processing continues.
 
 The "Review Record" action (after verifying the staging batch) opens every selected report in an editable resolution dialog: all eight parsed fields can be corrected, unresolved fields are flagged, and the Inspection Date demands a valid date. Blank required fields become `N/A` only at approval. The approved record is validated into an immutable `ValidatedReportRecord` and shown in a read-only Approved Record Preview; reviewing never modifies the source SPIN and never writes to any Word document.
 
-Validated records are rendered through the Word template and appended to the selected master report log in staged order.
+Validated records are rendered through the Word template and appended to the selected master report log in staged order. Appending is transactional: the report log is never modified in place, a byte-for-byte backup is created beside it before replacement, and the finished log is reopened and validated before success is reported. The report log receives only template-structured entry text; the audit trail lives in a separate file.
 
 ## Processing pipeline
 
@@ -29,10 +29,10 @@ SPIN .docx -> Parser -> ReportRecord -> Validator -> Template Renderer -> Master
 
 ## Technology
 
-- C# (.NET 8+)
+- C# (.NET 10)
 - WPF
 - Open XML SDK
-- NUnit / xUnit
+- xUnit
 - Windows
 
 ## Development

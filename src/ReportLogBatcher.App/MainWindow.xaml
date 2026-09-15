@@ -206,6 +206,12 @@
                             Margin="0,0,6,4"
                             AutomationProperties.Name="Review and approve selected report record"
                             Command="{Binding ReviewRecordCommand}" />
+                    <Button Content="Process Selected"
+                            MinWidth="120"
+                            Padding="8,3"
+                            Margin="0,0,6,4"
+                            AutomationProperties.Name="Append selected report to the report log"
+                            Command="{Binding ProcessSelectedCommand}" />
                     <Button Content="Remove from Batch"
                             MinWidth="120"
                             Padding="8,3"

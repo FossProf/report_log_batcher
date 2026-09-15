@@ -14,9 +14,24 @@ namespace ReportLogBatcher.App.Dialogs;
 /// </summary>
 public partial class ApprovedRecordPreviewWindow : Window
 {
-    public ApprovedRecordPreviewWindow(ReportResolutionResult resolution)
+    private readonly Button _okButton;
+
+    public ApprovedRecordPreviewWindow(ReportResolutionResult resolution, bool showAppendAction = false)
     {
         InitializeComponent();
+        _okButton = (Button)FindName("OKButton") ?? throw new InvalidOperationException("OKButton not found.");
+
+        if (showAppendAction)
+        {
+            AppendButton.Visibility = Visibility.Visible;
+            AppendButton.IsDefault = true;
+            _okButton.IsDefault = false;
+            _okButton.Content = "Close";
+        }
+        else
+        {
+            AppendButton.Visibility = Visibility.Collapsed;
+        }
 
         var record = resolution.ValidatedRecord
             ?? throw new ArgumentException(
@@ -88,4 +103,13 @@ public partial class ApprovedRecordPreviewWindow : Window
     }
 
     private void OnCloseClicked(object sender, RoutedEventArgs e) => Close();
+
+    private void OnAppendClicked(object sender, RoutedEventArgs e)
+    {
+        AppendRequested = true;
+        DialogResult = true;
+    }
+
+    /// <summary>True when the user chose "Append to Report Log" in append mode.</summary>
+    public bool AppendRequested { get; private set; }
 }

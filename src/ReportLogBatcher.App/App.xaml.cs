@@ -30,6 +30,8 @@ public partial class App : Application
 
             var validator = new ReportRecordValidator();
             var reportParser = new SpinReportParser();
+            var resolver = new ReportRecordResolver(validator);
+            var audit = new ReportAppendAuditService(_loggerFactory);
 
             var viewModel = new MainWindowViewModel(
                 new FileDialogService(),
@@ -39,7 +41,15 @@ public partial class App : Application
                 new RenameFileDialogService(),
                 new TemplateInspectionService(),
                 new ParsePreviewService(reportParser, _loggerFactory),
-                new ReportReviewService(reportParser, new ReportRecordResolver(validator), _loggerFactory),
+                new ReportReviewService(reportParser, resolver, _loggerFactory),
+                new AppendReportService(
+                    reportParser,
+                    resolver,
+                    new ReportLogTemplateRenderer(),
+                    new ReportLogWriter(),
+                    new ReportLogInitializer(),
+                    audit,
+                    _loggerFactory),
                 _loggerFactory);
 
             MainWindow = new MainWindow { DataContext = viewModel };

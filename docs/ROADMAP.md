@@ -65,24 +65,42 @@ Approved record:
 - Read-only "Approved Record Preview" shows the exact header (`Report #NNN – mm/dd/yy – first name`), the five contract body sections, and resolution metadata.
 - No Word rendering, no master-log append, no persistence of approvals. Reviewed records are endpoint-of-slice only.
 
-## Slice 7 — Batch Processor
+## Slice 7 — Template Renderer + Transactional Report-Log Append
+Both word-processing slices for ONE validated record, end to end:
+
+Template renderer (`ReportLogTemplateRenderer`):
+- Renders a `ValidatedReportRecord` through a COPY of the report-log template; original template bytes are never modified.
+- Header placeholders are replaced in place even when Word split them across runs (`proofErr`, `w:tab`, `w:br` interleaving handled by paragraph-text reconstruction/slicing).
+- The five textually-identical body placeholders are resolved by their section heading context.
+- Narrative values become real Word paragraphs preserving the placeholder paragraph's formatting (`\n\n` = new paragraph, single `\n` = line break).
+- The rendered output is validated (openable, no relationship-dependent content, no remaining placeholders, all approved values present); nothing is left behind on failure.
+
+Transactional writer (`ReportLogWriter`):
+- Never modifies the report log in place; a unique working copy is produced on disk.
+- The rendered entry's text (excluding its body-level section properties, stripping any nested ones) is inserted before the destination's final section properties.
+- The first entry in an empty log starts at the top; each subsequent entry begins on a new page (`pageBreakBefore` on the entry's first non-empty paragraph).
+- A byte-for-byte backup `Name.backup-yyyyMMdd-HHmmssfff.docx` is created in the same directory before the original is atomically replaced; backup names never overwrite existing files.
+- Success is reported only after the replacement is reopened and validated; on final-validation failure the original bytes are restored from the backup.
+- The report log receives ONLY template-structured entry text — no metadata or audit content is ever written into it.
+
+Initializer (`ReportLogInitializer`):
+- Creates a fresh empty report log from the template (styles + final section properties preserved, every paragraph removed) when the user explicitly chooses to initialize an empty/invalid destination.
+- Refuses to overwrite an already-valid document, and never modifies the template.
+
+App integration ("Process Selected"):
+- The append workflow pauses at resolution, shows the approved preview, then: validates the destination; if it is empty/invalid, asks the user to Exit or Initialize; shows a final confirmation (report number, source, destination, template, backup notice); renders to a temp directory; appends; and reports a structured success/failure.
+- A JSONL audit trail records every append attempt, manual substitution, `N/A` fallback, backup, and failure at `%LocalAppData%\ReportLogBatcher\audit\append-audit.jsonl` — always a SEPARATE file, never inside the report log.
+- Rows are marked Complete only after a successful append.
+
+## Slice 8 — Batch Processor
 Sequential processing in staged order.
 Per-report status/progress.
 Overall progress.
 Pause/resume for manual resolution.
 Error isolation.
 
-## Slice 8 — Template Renderer
-Populate a fresh template instance from a validated ReportRecord.
-Preserve required Word formatting.
-
-## Slice 9 — Master Log Writer
-Append completed forms to selected master log in exact batch order.
-
-## Slice 10 — Production Hardening
-Automatic pre-write backup.
-Duplicate detection.
+## Slice 9 — Production Hardening
+Automatic pre-write backup (already modeled in the slice-7 writer).
+Duplicate detection: re-append detection and page-break rules already laid down.
 Failure recovery.
-Audit logging.
-Final validation.
 Windows packaging.

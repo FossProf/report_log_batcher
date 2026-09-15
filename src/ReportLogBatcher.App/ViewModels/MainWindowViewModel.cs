@@ -19,6 +19,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly ITemplateInspectionService _templateInspectionService;
     private readonly IParsePreviewService _previewParseService;
     private readonly IReportReviewService _reviewService;
+    private readonly IAppendReportService _appendService;
     private readonly ILogger _logger;
     private readonly StagedBatch _stagedBatch = new();
 
@@ -46,6 +47,7 @@ public sealed class MainWindowViewModel : ObservableObject
         ITemplateInspectionService templateInspectionService,
         IParsePreviewService previewParseService,
         IReportReviewService reviewService,
+        IAppendReportService appendService,
         ILoggerFactory loggerFactory)
     {
         _dialogService = dialogService;
@@ -56,6 +58,7 @@ public sealed class MainWindowViewModel : ObservableObject
         _templateInspectionService = templateInspectionService;
         _previewParseService = previewParseService;
         _reviewService = reviewService;
+        _appendService = appendService;
         _logger = loggerFactory.CreateLogger<MainWindowViewModel>();
 
         BrowseReportLogCommand = new RelayCommand(BrowseReportLog);
@@ -68,6 +71,7 @@ public sealed class MainWindowViewModel : ObservableObject
         RenameFileCommand = new RelayCommand(OnRenameFile, () => SelectedRow is not null);
         PreviewParseCommand = new RelayCommand(OnPreviewParse, () => SelectedRow is not null);
         ReviewRecordCommand = new RelayCommand(OnReviewRecord, () => SelectedRow is not null);
+        ProcessSelectedCommand = new RelayCommand(OnProcessSelected, () => CanProcessSelected);
         ReloadBatchCommand = new RelayCommand(OnReloadBatch, () => CanReloadBatch);
 
         RestoreStoredSelections();
@@ -123,6 +127,15 @@ public sealed class MainWindowViewModel : ObservableObject
     public bool CanReloadBatch =>
         _reportsDirectoryValidation?.IsValid == true;
 
+    /// <summary>
+    /// Process Selected requires a valid report log and template plus a selected row
+    /// that has not already been appended in this session.
+    /// </summary>
+    public bool CanProcessSelected =>
+        _reportLogValidation?.IsValid == true
+        && _templateValidation?.IsValid == true
+        && SelectedRow is { CanProcess: true };
+
     public ObservableCollection<BatchEntryRow> BatchEntries { get; } = new();
 
     public BatchEntryRow? SelectedRow
@@ -172,6 +185,8 @@ public sealed class MainWindowViewModel : ObservableObject
     public ICommand PreviewParseCommand { get; }
 
     public ICommand ReviewRecordCommand { get; }
+
+    public ICommand ProcessSelectedCommand { get; }
 
     public ICommand ReloadBatchCommand { get; }
 
@@ -473,6 +488,21 @@ public sealed class MainWindowViewModel : ObservableObject
         _reviewService.Review(entry.FullPath);
     }
 
+    private void OnProcessSelected()
+    {
+        var row = SelectedRow;
+        if (row is null || !row.CanProcess)
+            return;
+
+        var appended = _appendService.ProcessSelected(_reportLogPath, ReportLogTemplatePath, row.FullPath);
+        if (appended)
+        {
+            row.MarkProcessed();
+            _logger.LogInformation("Report {File} marked Complete after successful append.", row.FileName);
+            RefreshCommands();
+        }
+    }
+
     private void OnReloadBatch()
     {
         try
@@ -606,6 +636,7 @@ public sealed class MainWindowViewModel : ObservableObject
         ((RelayCommand)RenameFileCommand).RaiseCanExecuteChanged();
         ((RelayCommand)PreviewParseCommand).RaiseCanExecuteChanged();
         ((RelayCommand)ReviewRecordCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)ProcessSelectedCommand).RaiseCanExecuteChanged();
     }
 
     private static string? ToExistingDirectory(string path) =>
