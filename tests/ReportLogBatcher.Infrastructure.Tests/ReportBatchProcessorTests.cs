@@ -417,6 +417,122 @@ public sealed class ReportBatchProcessorTests : IDisposable
     }
 
     [Fact]
+    public void WriteFailureAtSecondItem_StopsBatch_ThirdItemNeverTouched()
+    {
+        var a = CreateSpin("a.docx", "101");
+        var b = CreateSpin("b.docx", "202");
+        var c = CreateSpin("c.docx", "303");
+        var (template, log) = CreateDestinations("template.docx", "log.docx");
+        var events = new List<BatchRunEvent>();
+
+        var countingParser = new CountingParser(new SpinReportParser());
+        var countingWriter = new CountingWriter(new SequenceFailWriter(new ReportLogWriter(), failOnCall: 2));
+
+        var summary = Run(
+            new[] { a, b, c },
+            (template, log),
+            parse => ManualComplete(parse),
+            events.Add,
+            parser: countingParser,
+            writer: countingWriter);
+
+        Assert.Equal(BatchStopReason.StoppedOnError, summary.StopReason);
+        Assert.Equal(
+            new[] { BatchEntryStatus.Complete, BatchEntryStatus.Failed, BatchEntryStatus.Pending },
+            summary.Items.Select(item => item.Status));
+        Assert.Equal(1, summary.CompletedCount);
+        Assert.Equal(1, summary.FailedCount);
+        Assert.Equal(1, summary.RemainingCount);
+        Assert.Equal(2, countingParser.Calls);
+        Assert.Equal(2, countingWriter.Calls);
+        Assert.DoesNotContain(events, e => e.Kind == BatchRunEventKind.BatchCompleted);
+        AssertContainsEntryNumberOrder(log, "101");
+    }
+
+    [Fact]
+    public void RenderFailureAtSecondItem_ThirdItemNeverRenderedOrWritten()
+    {
+        var a = CreateSpin("a.docx", "101");
+        var b = CreateSpin("b.docx", "202");
+        var c = CreateSpin("c.docx", "303");
+        var (template, log) = CreateDestinations("template.docx", "log.docx");
+        var events = new List<BatchRunEvent>();
+
+        var countingParser = new CountingParser(new SpinReportParser());
+        var countingRenderer = new CountingRenderer(new SequenceFailRenderer(new ReportLogTemplateRenderer(), failOnCall: 2));
+        var countingWriter = new CountingWriter(new ReportLogWriter());
+
+        var summary = Run(
+            new[] { a, b, c },
+            (template, log),
+            parse => ManualComplete(parse),
+            events.Add,
+            parser: countingParser,
+            renderer: countingRenderer,
+            writer: countingWriter);
+
+        Assert.Equal(BatchStopReason.StoppedOnError, summary.StopReason);
+        Assert.Equal(
+            new[] { BatchEntryStatus.Complete, BatchEntryStatus.Failed, BatchEntryStatus.Pending },
+            summary.Items.Select(item => item.Status));
+        Assert.Equal(2, countingParser.Calls);
+        Assert.Equal(2, countingRenderer.Calls);
+        Assert.Equal(1, countingWriter.Calls);
+        var failed = summary.Items.Single(item => item.Status == BatchEntryStatus.Failed);
+        Assert.Contains("render", failed.Message, StringComparison.OrdinalIgnoreCase);
+        AssertContainsEntryNumberOrder(log, "101");
+    }
+
+    [Fact]
+    public void ManualCancelAtSecondItem_ThirdItemNeverTouched_NoNaFabricated()
+    {
+        var a = StubSource("a.docx");
+        var b = StubSource("b.docx");
+        var c = StubSource("c.docx");
+        var (template, log) = CreateDestinations("template.docx", "log.docx");
+        var events = new List<BatchRunEvent>();
+
+        var parser = StubParser(path =>
+            Path.GetFileName(path) == "b.docx"
+                ? new SpinParseResult(CompleteRecord("202") with { ReportNumber = null }, SpinParseStatus.Parsed, path, Array.Empty<ParseIssue>())
+                : new SpinParseResult(CompleteRecord("101"), SpinParseStatus.Parsed, path, Array.Empty<ParseIssue>()));
+        var countingParser = new CountingParser(parser);
+        var countingRenderer = new CountingRenderer(new ReportLogTemplateRenderer());
+        var countingWriter = new CountingWriter(new ReportLogWriter());
+        var manualCalls = 0;
+
+        var summary = Run(
+            new[] { a, b, c },
+            (template, log),
+            parse =>
+            {
+                manualCalls++;
+                return Path.GetFileName(parse.SourcePath) == "b.docx" ? null : ManualComplete(parse);
+            },
+            events.Add,
+            parser: countingParser,
+            renderer: countingRenderer,
+            writer: countingWriter);
+
+        Assert.Equal(BatchStopReason.StoppedByUser, summary.StopReason);
+        Assert.Equal(1, manualCalls);
+        Assert.Equal(
+            new[] { BatchEntryStatus.Complete, BatchEntryStatus.NeedsInput, BatchEntryStatus.Pending },
+            summary.Items.Select(item => item.Status));
+        Assert.Equal(1, summary.CompletedCount);
+        Assert.Equal(1, summary.NeedsInputCount);
+        Assert.Equal(1, summary.RemainingCount);
+        Assert.Equal(2, countingParser.Calls);
+        Assert.Equal(1, countingRenderer.Calls);
+        Assert.Equal(1, countingWriter.Calls);
+        Assert.Contains(events, e => e.Kind == BatchRunEventKind.ManualResolutionCancelled);
+        Assert.DoesNotContain(events, e => e.NaFallbackFields.Count > 0);
+        Assert.DoesNotContain(events, e => e.Kind == BatchRunEventKind.WriteSucceeded && e.OrderIndex > 1);
+        Assert.DoesNotContain(events, e => e.Kind == BatchRunEventKind.BatchCompleted);
+        AssertContainsEntryNumberOrder(log, "101");
+    }
+
+    [Fact]
     public async Task CancellationToken_PreCancelled_StopsWithoutWork()
     {
         var spin = CreateSpin("clean.docx", "101");
@@ -696,6 +812,51 @@ public sealed class ReportBatchProcessorTests : IDisposable
         public StubParserImpl(Func<string, SpinParseResult> handler) => _handler = handler;
 
         public SpinParseResult Parse(string spinReportPath) => _handler(spinReportPath);
+    }
+
+    private sealed class CountingParser : ISpinReportParser
+    {
+        private readonly ISpinReportParser _inner;
+
+        public CountingParser(ISpinReportParser inner) => _inner = inner;
+
+        public int Calls { get; private set; }
+
+        public SpinParseResult Parse(string spinReportPath)
+        {
+            Calls++;
+            return _inner.Parse(spinReportPath);
+        }
+    }
+
+    private sealed class CountingRenderer : IReportLogTemplateRenderer
+    {
+        private readonly IReportLogTemplateRenderer _inner;
+
+        public CountingRenderer(IReportLogTemplateRenderer inner) => _inner = inner;
+
+        public int Calls { get; private set; }
+
+        public ReportTemplateRenderResult Render(string templatePath, ValidatedReportRecord record, string outputPath)
+        {
+            Calls++;
+            return _inner.Render(templatePath, record, outputPath);
+        }
+    }
+
+    private sealed class CountingWriter : IReportLogWriter
+    {
+        private readonly IReportLogWriter _inner;
+
+        public CountingWriter(IReportLogWriter inner) => _inner = inner;
+
+        public int Calls { get; private set; }
+
+        public ReportLogWriteResult Append(string reportLogPath, string renderedEntryPath)
+        {
+            Calls++;
+            return _inner.Append(reportLogPath, renderedEntryPath);
+        }
     }
 
     private sealed class AlwaysFailWriter : IReportLogWriter

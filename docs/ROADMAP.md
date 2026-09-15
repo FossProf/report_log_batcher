@@ -101,16 +101,18 @@ Automatic approval:
 - A clean batch therefore shows exactly ONE confirmation (report count, destination, template, backup notice) before the run and ONE summary afterwards.
 
 Exception-only manual intervention:
-- A report needs manual input only when it genuinely requires attention: an unreadable document or parsing failure, any blocking diagnostic, an unresolved field, a human edit, an `N/A` fallback, or a cancelled resolution prompt.
-- Each such report is set to NeedsInput and the injectable manual-resolution dialog pauses processing for that report only; later reports never process ahead, and unpaused reports continue in order afterwards.
+- A report needs manual input only when it genuinely requires attention: any blocking diagnostic, an unresolved field, a human edit, or an `N/A` fallback decided at approval. An unreadable document or failed parse is a failure, not a prompt.
+- Each such report is set to NeedsInput and the injectable manual-resolution dialog pauses processing for that report only; later reports never process ahead, and processing resumes in staged order once the operator approves.
 - No required field can remain blank: validated records can never carry blanks; a blank manual entry becomes `N/A`; the report number is never guessed from the file name, and today's date is never invented for the Inspection Date.
-- A cancelled prompt now applies `N/A`, records the substitution with an explicit cancelled marker, and aborts the run cleanly.
+- Cancelling manual resolution neither modifies the record nor fabricates `N/A`: the cancelled report keeps its original parsed record, is left Needs Input, nothing is appended for it, and the run stops with every later report still Pending. `N/A` is substituted only when the operator approves/submits manual resolution with a still-blank required string field.
 
 Safe stop:
-- On user cancellation or a stop-on-error, the current report is marked NeedsInput (or Failed for an error), earlier reports remain Complete, later reports stay Pending, a summary explains the stop, and `BatchStopped` is emitted (also on external token cancellation). Nothing is silently discarded.
+- Any nonrecoverable parse/render/write/source-file failure marks the current report Failed and immediately stops the batch: no later staged report may parse, render, or append.
+- On user cancellation (or external token cancellation), the current report is marked NeedsInput, earlier reports remain Complete, later reports stay Pending, and `BatchStopped` is emitted.
+- In both cases prior successfully appended entries remain Complete — there is no whole-batch rollback. A single summary explains the stop and nothing is silently discarded.
 
 Isolation:
-- Every item renders through a fresh template copy into a private temp directory that is deleted in `finally`; rendering/writing failures affect only that row (Failed) and the rest of the batch continues.
+- Every item renders through a fresh template copy into a private temp directory that is deleted in `finally`. Rendering/writing failures stop the batch immediately (the affected row is Failed); a failed report is never partially committed and reports further ahead are never touched.
 - `append-audit.jsonl` records run start/stop, per-item outcomes (`manual edit`, `N/A fallback`, `failed`, `rendered + appended`), and the batch summary — always in the separate `%LocalAppData%\ReportLogBatcher\audit` file, never inside the report log.
 - Progress: an "Include" checkbox (≠ removal; excluded rows are never opened) and a per-report status column (Pending / NeedsInput / Complete / Failed) alongside an overall "Processed X of Y" progress bar; terminal statuses remain visible after the run.
 
