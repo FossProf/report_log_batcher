@@ -166,6 +166,7 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <TextBlock Grid.Row="0"
@@ -218,6 +219,26 @@
                             Margin="0,0,6,4"
                             AutomationProperties.Name="Remove selected report from batch"
                             Command="{Binding RemoveFromBatchCommand}" />
+                    <Separator Margin="0,0,10,4" />
+                    <Button Content="Select All"
+                            MinWidth="86"
+                            Padding="8,3"
+                            Margin="0,0,6,4"
+                            AutomationProperties.Name="Include every eligible report in the batch"
+                            Command="{Binding SelectAllCommand}" />
+                    <Button Content="Clear All"
+                            MinWidth="86"
+                            Padding="8,3"
+                            Margin="0,0,6,4"
+                            AutomationProperties.Name="Exclude every eligible report from the batch"
+                            Command="{Binding ClearAllCommand}" />
+                    <Button Content="Process Batch"
+                            MinWidth="110"
+                            FontWeight="SemiBold"
+                            Padding="8,3"
+                            Margin="0,0,6,4"
+                            AutomationProperties.Name="Append all included reports to the report log"
+                            Command="{Binding ProcessBatchCommand}" />
                     <Button Content="Reload Batch"
                             MinWidth="90"
                             Padding="8,3"
@@ -235,8 +256,20 @@
                           BorderBrush="#CCCCCC">
                     <ListView.View>
                         <GridView>
+                            <GridViewColumn Header="Include"
+                                            Width="56">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  IsChecked="{Binding IsIncluded, Mode=TwoWay}"
+                                                  IsEnabled="{Binding IsIncludeEnabled}"
+                                                  AutomationProperties.Name="Include report in batch" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
                             <GridViewColumn Header="#"
-                                            Width="48"
+                                            Width="40"
                                             DisplayMemberBinding="{Binding Sequence}" />
                             <GridViewColumn Width="Auto"
                                             Header="File">
@@ -250,12 +283,25 @@
                             </GridViewColumn>
                             <GridViewColumn Header="Status"
                                             Width="90"
-                                            DisplayMemberBinding="{Binding Status}" />
+                                            DisplayMemberBinding="{Binding StatusDisplay}" />
                         </GridView>
                     </ListView.View>
                 </ListView>
 
-                <TextBlock Grid.Row="3"
+                <DockPanel Grid.Row="3"
+                           Margin="0,8,0,0">
+                    <TextBlock DockPanel.Dock="Left"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0"
+                               Text="{Binding BatchProgressText}" />
+                    <ProgressBar Height="16"
+                                 VerticalAlignment="Center"
+                                 Minimum="0"
+                                 Maximum="{Binding BatchProgressMaximum}"
+                                 Value="{Binding BatchProgressValue}" />
+                </DockPanel>
+
+                <TextBlock Grid.Row="4"
                            Margin="0,8,0,0"
                            Foreground="Gray"
                            TextWrapping="Wrap"
@@ -275,7 +321,7 @@
                     </TextBlock.Style>
                 </TextBlock>
 
-                <TextBlock Grid.Row="4"
+                <TextBlock Grid.Row="5"
                            Margin="0,8,0,0"
                            Foreground="#C0392B"
                            TextWrapping="Wrap"
@@ -295,7 +341,7 @@
                     </TextBlock.Style>
                 </TextBlock>
 
-                <Button Grid.Row="5"
+                <Button Grid.Row="6"
                         Content="Build Batch"
                         Width="120"
                         Height="28"

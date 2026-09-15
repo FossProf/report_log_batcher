@@ -93,11 +93,26 @@ App integration ("Process Selected"):
 - Rows are marked Complete only after a successful append.
 
 ## Slice 8 — Batch Processor
-Sequential processing in staged order.
-Per-report status/progress.
-Overall progress.
-Pause/resume for manual resolution.
-Error isolation.
+Checked batch processing with automatic approval and exception-only manual intervention.
+
+Automatic approval:
+- "Process Batch" runs the verified batch sequentially in displayed order; it requires a valid destination report-log, a valid template, and at least one included row.
+- `ReportBatchProcessor` advances through reports automatically with no prompting on the happy path: a report is approved automatically when it parses completely (`Parsed`) with no blocking diagnostics and its resolution carries no manual edits and no `N/A` fallbacks. Auto-approved reports flow straight from parse to validation to rendering.
+- A clean batch therefore shows exactly ONE confirmation (report count, destination, template, backup notice) before the run and ONE summary afterwards.
+
+Exception-only manual intervention:
+- A report needs manual input only when it genuinely requires attention: an unreadable document or parsing failure, any blocking diagnostic, an unresolved field, a human edit, an `N/A` fallback, or a cancelled resolution prompt.
+- Each such report is set to NeedsInput and the injectable manual-resolution dialog pauses processing for that report only; later reports never process ahead, and unpaused reports continue in order afterwards.
+- No required field can remain blank: validated records can never carry blanks; a blank manual entry becomes `N/A`; the report number is never guessed from the file name, and today's date is never invented for the Inspection Date.
+- A cancelled prompt now applies `N/A`, records the substitution with an explicit cancelled marker, and aborts the run cleanly.
+
+Safe stop:
+- On user cancellation or a stop-on-error, the current report is marked NeedsInput (or Failed for an error), earlier reports remain Complete, later reports stay Pending, a summary explains the stop, and `BatchStopped` is emitted (also on external token cancellation). Nothing is silently discarded.
+
+Isolation:
+- Every item renders through a fresh template copy into a private temp directory that is deleted in `finally`; rendering/writing failures affect only that row (Failed) and the rest of the batch continues.
+- `append-audit.jsonl` records run start/stop, per-item outcomes (`manual edit`, `N/A fallback`, `failed`, `rendered + appended`), and the batch summary — always in the separate `%LocalAppData%\ReportLogBatcher\audit` file, never inside the report log.
+- Progress: an "Include" checkbox (≠ removal; excluded rows are never opened) and a per-report status column (Pending / NeedsInput / Complete / Failed) alongside an overall "Processed X of Y" progress bar; terminal statuses remain visible after the run.
 
 ## Slice 9 — Production Hardening
 Automatic pre-write backup (already modeled in the slice-7 writer).

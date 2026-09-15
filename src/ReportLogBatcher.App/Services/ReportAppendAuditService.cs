@@ -6,7 +6,9 @@ namespace ReportLogBatcher.App.Services;
 
 /// <summary>
 /// One append-operation audit record. Metadata only — no narrative report bodies
-/// are ever recorded. Written to a file separate from the report log.
+/// are ever recorded. Batch runs record one entry per workflow event
+/// (<see cref="BatchEvent"/>), each tagged with <see cref="BatchId"/> and its
+/// <see cref="OrderIndex"/>. Written to a file separate from the report log.
 /// </summary>
 public sealed class ReportAppendAuditEntry
 {
@@ -21,6 +23,18 @@ public sealed class ReportAppendAuditEntry
     public string? Backup { get; set; }
     public string Result { get; set; } = string.Empty;
     public string? Message { get; set; }
+
+    /// <summary>Batch-run identifier shared by every entry recorded during one batch.</summary>
+    public string? BatchId { get; set; }
+
+    /// <summary>The batch workflow event this entry records (see BatchRunEventKind).</summary>
+    public string? BatchEvent { get; set; }
+
+    /// <summary>1-based staged position of the report within the batch.</summary>
+    public int? OrderIndex { get; set; }
+
+    /// <summary>On the BatchStarted event: the full staged processing order.</summary>
+    public string[]? StagedOrder { get; set; }
 }
 
 /// <summary>

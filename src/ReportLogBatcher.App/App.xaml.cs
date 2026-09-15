@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using ReportLogBatcher.App.Services;
 using ReportLogBatcher.App.ViewModels;
 using ReportLogBatcher.Core.Services;
+using ReportLogBatcher.Infrastructure.Batch;
 using ReportLogBatcher.Infrastructure.Word;
 
 namespace ReportLogBatcher.App;
@@ -31,6 +32,9 @@ public partial class App : Application
             var validator = new ReportRecordValidator();
             var reportParser = new SpinReportParser();
             var resolver = new ReportRecordResolver(validator);
+            var renderer = new ReportLogTemplateRenderer();
+            var writer = new ReportLogWriter();
+            var initializer = new ReportLogInitializer();
             var audit = new ReportAppendAuditService(_loggerFactory);
 
             var viewModel = new MainWindowViewModel(
@@ -45,11 +49,16 @@ public partial class App : Application
                 new AppendReportService(
                     reportParser,
                     resolver,
-                    new ReportLogTemplateRenderer(),
-                    new ReportLogWriter(),
-                    new ReportLogInitializer(),
+                    renderer,
+                    writer,
+                    initializer,
                     audit,
                     _loggerFactory),
+                resolver,
+                initializer,
+                new ReportBatchProcessor(reportParser, resolver, renderer, writer),
+                new BatchUserInteractionService(),
+                audit,
                 _loggerFactory);
 
             MainWindow = new MainWindow { DataContext = viewModel };

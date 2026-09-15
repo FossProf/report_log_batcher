@@ -22,8 +22,25 @@ public enum ParseIssueKind
 /// <summary>
 /// A single deterministic parser finding, tied to the affected
 /// <see cref="ReportField"/> when applicable.
+///
+/// <see cref="IsBlocking"/> is the explicit, typed severity. Classification is
+/// the parser's decision, made at the emission site — never inferred from
+/// message text. Batch auto-approval treats a blocking finding as requiring
+/// manual review even when the affected field was somehow resolved, while an
+/// informational (non-blocking) finding with all fields present does not force
+/// manual review.
 /// </summary>
 public sealed record ParseIssue(
     ParseIssueKind Kind,
     ReportField? Field,
-    string Message);
+    string Message)
+{
+    /// <summary>
+    /// True when the finding casts uncertainty onto a report value (missing,
+    /// ambiguous, malformed, or unreadable structure) and manual review is
+    /// required. False for purely informational structural observations whose
+    /// values were still determined deterministically. Defaults to true so every
+    /// existing diagnostic stays blocking.
+    /// </summary>
+    public bool IsBlocking { get; init; } = true;
+}

@@ -1,0 +1,54 @@
+<Window x:Class="ReportLogBatcher.App.Dialogs.BatchConfirmationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Process Batch"
+        Width="560"
+        SizeToContent="Height"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+    <StackPanel Margin="16">
+        <TextBlock TextWrapping="Wrap"
+                   FontSize="14"
+                   FontWeight="SemiBold"
+                   Text="{Binding IncludedCount, StringFormat=Append {0} reports to the project report log?}" />
+        <TextBlock Margin="0,10,0,0"
+                   Text="One confirmation for the whole batch. Each append creates a fresh backup of the report log before it is modified, in the same directory."
+                   TextWrapping="Wrap" />
+
+        <Border Margin="0,12,0,0"
+                BorderBrush="#CCCCCC"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="10">
+            <StackPanel>
+                <TextBlock FontWeight="SemiBold" Text="Report log" Margin="0,0,0,4" />
+                <TextBlock Text="{Binding ReportLogPath}" TextWrapping="Wrap" Foreground="#444444" />
+
+                <TextBlock FontWeight="SemiBold" Text="Template" Margin="0,10,0,4" />
+                <TextBlock Text="{Binding TemplatePath}" TextWrapping="Wrap" Foreground="#444444" />
+
+                <TextBlock FontWeight="SemiBold" Text="Processing order" Margin="0,10,0,4" />
+                <TextBlock TextWrapping="Wrap" Foreground="#444444"
+                           Text="{Binding OrderSummary}" />
+            </StackPanel>
+        </Border>
+
+        <TextBlock Margin="0,12,0,0"
+                   Foreground="#7B7B7B"
+                   Text="Clean records are approved automatically. Reports with blocking diagnostics pause for manual resolution."
+                   TextWrapping="Wrap" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Process Batch"
+                    Width="120"
+                    Padding="8,4"
+                    Margin="0,0,8,0"
+                    Click="OnProcessBatchClicked" />
+            <Button Content="Cancel"
+                    Width="90"
+                    Padding="8,4"
+                    Click="OnCancelClicked" />
+        </StackPanel>
+    </StackPanel>
+</Window>
