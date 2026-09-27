@@ -117,7 +117,18 @@ Isolation:
 - Progress: an "Include" checkbox (≠ removal; excluded rows are never opened) and a per-report status column (Pending / NeedsInput / Complete / Failed) alongside an overall "Processed X of Y" progress bar; terminal statuses remain visible after the run.
 
 ## Slice 9 — Production Hardening
-Automatic pre-write backup (already modeled in the slice-7 writer).
-Duplicate detection: re-append detection and page-break rules already laid down.
-Failure recovery.
-Windows packaging.
+Duplicate detection (writer-level):
+- `ReportLogWriter` refuses to re-append an entry that is already present. Identity is the rendered entry's first `Report #` header line (`Report #NNN – mm/dd/yy– FirstName`, whitespace-normalized), searched against the destination paragraphs.
+- Detection happens BEFORE any backup/copy; the result is a structured `AlreadyAppended` failure and the report log is left untouched. The same report number on a DIFFERENT inspection date is a new entry, not a re-append.
+- Batch behavior: an `AlreadyAppended` result marks that report Failed and stops the batch (no later report parses, renders, or appends) — consistent with the slice-8 stop rules.
+- The automatic pre-write backup from slice 7 remains the recovery net before the original is ever replaced.
+
+Startup temp cleanup:
+- `BatchTempArtifactCleaner` removes abandoned `RLB-Batch-*` render directories in the system temp at startup — best effort and only older than 24 hours, so an in-flight batch is never disturbed and cleanup failures never block startup. The batch processor still deletes its own directory in `finally`; this sweep is the recovery net for being killed mid-batch.
+
+Windows packaging:
+- The app publishes self-contained for win-x64. `installer/ReportLogBatcher.Setup` is a WiX v5 SDK MSI project (`WixToolset.Sdk` 5.0.2 + `WixToolset.UI.wixext` 5.0.2) that publishes the app fresh on each build, harvests the publish output into a WiX fragment (deterministic ids/GUIDs via `Generate-Harvest.ps1`), and links a per-machine x64 MSI with the WixUI_InstallDir installer UI, Start Menu shortcut, major-upgrade support, and proper uninstall — ICE-clean at 0 warnings.
+- Build with `dotnet build installer\ReportLogBatcher.Setup\ReportLogBatcher.Setup.wixproj -c Release`; output: `installer\ReportLogBatcher.Setup\bin\Release\ReportLogBatcher.msi`.
+
+Future:
+- Failure recovery / restart-of-interrupted-batch workflow.

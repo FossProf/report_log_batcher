@@ -484,6 +484,45 @@ public sealed class ReportBatchProcessorTests : IDisposable
     }
 
     [Fact]
+    public void DuplicateRecordInBatch_FailsAtSecondOccurrence_StopsBatch()
+    {
+        var a = StubSource("a.docx");
+        var b = StubSource("b.docx");
+        var c = StubSource("c.docx");
+        var (template, log) = CreateDestinations("template.docx", "log.docx");
+        var events = new List<BatchRunEvent>();
+
+        var parser = StubParser(path => new SpinParseResult(
+            CompleteRecord("101"),
+            SpinParseStatus.Parsed,
+            path,
+            Array.Empty<ParseIssue>()));
+        var countingParser = new CountingParser(parser);
+        var countingRenderer = new CountingRenderer(new ReportLogTemplateRenderer());
+        var countingWriter = new CountingWriter(new ReportLogWriter());
+
+        var summary = Run(
+            new[] { a, b, c },
+            (template, log),
+            parse => ManualComplete(parse),
+            events.Add,
+            parser: countingParser,
+            renderer: countingRenderer,
+            writer: countingWriter);
+
+        Assert.Equal(BatchStopReason.StoppedOnError, summary.StopReason);
+        Assert.Equal(
+            new[] { BatchEntryStatus.Complete, BatchEntryStatus.Failed, BatchEntryStatus.Pending },
+            summary.Items.Select(item => item.Status));
+        Assert.Equal(2, countingParser.Calls);
+        Assert.Equal(2, countingRenderer.Calls);
+        Assert.Equal(2, countingWriter.Calls);
+        var failed = summary.Items.Single(item => item.Status == BatchEntryStatus.Failed);
+        Assert.Contains("already been appended", failed.Message, StringComparison.OrdinalIgnoreCase);
+        AssertContainsEntryNumberOrder(log, "101");
+    }
+
+    [Fact]
     public void ManualCancelAtSecondItem_ThirdItemNeverTouched_NoNaFabricated()
     {
         var a = StubSource("a.docx");

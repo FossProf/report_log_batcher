@@ -84,9 +84,16 @@ public sealed class ReportLogWriter : IReportLogWriter
             return Fail(reportLogPath, null, ReportLogWriteErrorKind.InvalidRenderedEntry,
                 "The rendered entry still contains placeholders: " + string.Join(", ", remaining));
 
-        if (entryInspection.UnsupportedContentDescription is not null)
+if (entryInspection.UnsupportedContentDescription is not null)
             return Fail(reportLogPath, null, ReportLogWriteErrorKind.UnsupportedRenderedContent,
                 entryInspection.UnsupportedContentDescription);
+
+        var entryHeader = EntryIdentityHeader(entryInspection.ParagraphTexts);
+        if (entryHeader is not null
+            && destinationInspection.ParagraphTexts.Any(text =>
+                IdentityHeaderLine(text) == entryHeader))
+            return Fail(reportLogPath, null, ReportLogWriteErrorKind.AlreadyAppended,
+                $"The report '{entryHeader}' has already been appended to the report log and was NOT appended again.");
 
         var hasPriorContent = destinationInspection.ParagraphTexts.Any(text => !string.IsNullOrWhiteSpace(text));
         var destinationParagraphCount = destinationInspection.ParagraphTexts.Count;
@@ -298,12 +305,58 @@ private static void Cleanup(string workingPath)
         }
     }
 
-    private static ReportLogWriteResult Fail(
+private static ReportLogWriteResult Fail(
         string? destinationPath,
         string? backupPath,
         ReportLogWriteErrorKind errorKind,
         string message) =>
         new(false, destinationPath, backupPath, errorKind, message);
+
+    /// <summary>
+    /// The identity header line of a rendered entry, or null when the entry has no
+    /// <c>Report #</c> header (then duplicate detection is skipped). The exact
+    /// rendered header uniquely identifies the record: report number, inspection
+    /// date, and inspector first name.
+    /// </summary>
+    private static string? EntryIdentityHeader(IReadOnlyList<string> paragraphTexts) =>
+        paragraphTexts
+            .Select(IdentityHeaderLine)
+            .FirstOrDefault(line => line is not null);
+
+    /// <summary>
+    /// Normalizes a paragraph for identity comparison: trims and collapses any
+    /// interior whitespace run to a single space. Returns null for blank text and
+    /// for text that does not look like a rendered entry header.
+    /// </summary>
+    private static string? IdentityHeaderLine(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return null;
+
+        var normalized = CollapseWhitespace(text);
+        return normalized.StartsWith("Report #", StringComparison.Ordinal) ? normalized : null;
+    }
+
+    private static string CollapseWhitespace(string text)
+    {
+        var builder = new System.Text.StringBuilder(text.Length);
+        var inWhitespace = false;
+        foreach (var character in text)
+        {
+            if (char.IsWhiteSpace(character))
+            {
+                inWhitespace = true;
+                continue;
+            }
+
+            if (inWhitespace && builder.Length > 0)
+                builder.Append(' ');
+            inWhitespace = false;
+            builder.Append(character);
+        }
+
+        return builder.ToString();
+    }
 
     private static bool PathsEqual(string a, string b) =>
         string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);

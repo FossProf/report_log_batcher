@@ -119,13 +119,20 @@ public sealed class ReportLogDocumentFactory
     }
 
     /// <summary>A rendered-entry-shaped document with no placeholders.</summary>
-    public string CreateEntryDocument(string fileName)
+    public string CreateEntryDocument(string fileName) =>
+        CreateEntryDocument(fileName, "Report #319 – 09/11/26– Anthony");
+
+    /// <summary>
+    /// A rendered-entry-shaped document with no placeholders and the given
+    /// identity header line.
+    /// </summary>
+    public string CreateEntryDocument(string fileName, string headerText)
     {
         var path = Path.Combine(_tempRoot, fileName);
         using var document = WordprocessingDocument.Create(path, WordprocessingDocumentType.Document);
         var body = new Body();
 
-        body.Append(BuildParagraph("Report #319 – 09/11/26– Anthony"));
+        body.Append(BuildParagraph(headerText));
         foreach (var section in ReportTemplateContract.BodySections)
         {
             body.Append(BuildHeading(section.Heading));

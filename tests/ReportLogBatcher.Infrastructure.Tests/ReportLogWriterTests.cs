@@ -48,16 +48,55 @@ public sealed class ReportLogWriterTests : IDisposable
     {
         var log = _factory.CreateReportLog("log.docx");
         var entry = _factory.CreateEntryDocument("entry.docx");
+        var second = _factory.CreateEntryDocument("second.docx", "Report #320 – 09/11/26– Anthony");
 
         Assert.True(_writer.Append(log, entry).Success);
 
-        var second = _writer.Append(log, entry);
-        Assert.True(second.Success, second.Message);
+        var secondResult = _writer.Append(log, second);
+        Assert.True(secondResult.Success, secondResult.Message);
 
         var indexes = HeaderIndexes(log, EntryHeader);
-        Assert.Equal(2, indexes.Count);
+        Assert.Single(indexes);
         Assert.False(HasPageBreakBefore(indexes[0]));
-        Assert.True(HasPageBreakBefore(indexes[1]));
+
+        var secondIndexes = HeaderIndexes(log, HeaderFor(320, "09/11/26"));
+        Assert.Single(secondIndexes);
+        Assert.True(HasPageBreakBefore(secondIndexes[0]));
+    }
+
+    [Fact]
+    public void AppendingIdenticalEntryAgain_RejectedAsAlreadyAppended_LogUnchanged()
+    {
+        var log = _factory.CreateReportLog("log.docx");
+        var entry = _factory.CreateEntryDocument("entry.docx");
+
+        Assert.True(_writer.Append(log, entry).Success, "First append must succeed.");
+        var afterFirst = File.ReadAllBytes(log);
+        var backupsAfterFirst = BackupCount();
+
+        var result = _writer.Append(log, entry);
+
+        Assert.False(result.Success);
+        Assert.Equal(ReportLogWriteErrorKind.AlreadyAppended, result.ErrorKind);
+        Assert.Contains("already been appended", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(afterFirst, File.ReadAllBytes(log));
+        Assert.Equal(backupsAfterFirst, BackupCount());
+        Assert.Empty(WorkingFiles());
+    }
+
+    [Fact]
+    public void SameReportNumber_DifferentInspectionDate_NotAReAppend()
+    {
+        var log = _factory.CreateReportLog("log.docx");
+        var entry = _factory.CreateEntryDocument("entry.docx", "Report #319 – 09/11/26– Anthony");
+        var reInspection = _factory.CreateEntryDocument("reinspection.docx", "Report #319 – 10/01/26– Anthony");
+
+        Assert.True(_writer.Append(log, entry).Success);
+        var result = _writer.Append(log, reInspection);
+
+        Assert.True(result.Success, result.Message);
+        Assert.Single(HeaderIndexes(log, EntryHeader));
+        Assert.Single(HeaderIndexes(log, HeaderFor(319, "10/01/26")));
     }
 
     [Fact]
@@ -304,6 +343,12 @@ public sealed class ReportLogWriterTests : IDisposable
 
     private string[] WorkingFiles() =>
         Directory.GetFiles(_tempRoot, "*.working.docx");
+
+    private int BackupCount() =>
+        Directory.GetFiles(_tempRoot, "*.backup-*").Length;
+
+    private static string HeaderFor(int reportNumber, string inspectionDate) =>
+        "Report #" + reportNumber + " " + EnDash + " " + inspectionDate + EnDash + " Anthony";
 
     public void Dispose()
     {

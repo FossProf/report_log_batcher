@@ -70,23 +70,26 @@ public sealed class ReportLogIntegrationTests : IDisposable
     {
         var template = _factory.CreateTemplate("template.docx");
         var log = _factory.CreateReportLog("log.docx");
-        var rendered = Path.Combine(_tempRoot, "rendered-entry.docx");
+        var first = Path.Combine(_tempRoot, "rendered-first.docx");
+        var second = Path.Combine(_tempRoot, "rendered-second.docx");
 
-        Assert.True(_renderer.Render(template, ReportRecordFixture.Create(), rendered).Success);
-        Assert.True(_writer.Append(log, rendered).Success);
-        Assert.True(_writer.Append(log, rendered).Success, "Appending a second entry must succeed.");
+        Assert.True(_renderer.Render(template, ReportRecordFixture.Create(), first).Success);
+        Assert.True(_writer.Append(log, first).Success);
+        Assert.True(_renderer.Render(template, ReportRecordFixture.Create(reportNumber: "320"), second).Success);
+        var secondAppend = _writer.Append(log, second);
+        Assert.True(secondAppend.Success, secondAppend.Message);
 
         var header = "Report #319 – 09/11/26– Anthony";
+        var secondHeader = "Report #320 – 09/11/26– Anthony";
         var paragraphs = WordDocumentInspector.Inspect(log).ParagraphTexts;
-        var headerIndexes = paragraphs
-            .Select((text, index) => (text, index))
-            .Where(item => item.text == header)
-            .Select(item => item.index)
-            .ToList();
 
-        Assert.Equal(2, headerIndexes.Count);
+        var headerIndexes = HeaderIndexes(paragraphs, header);
+        Assert.Single(headerIndexes);
         Assert.False(HasPageBreakBefore(log, headerIndexes[0]));
-        Assert.True(HasPageBreakBefore(log, headerIndexes[1]));
+
+        var secondIndexes = HeaderIndexes(paragraphs, secondHeader);
+        Assert.Single(secondIndexes);
+        Assert.True(HasPageBreakBefore(log, secondIndexes[0]));
     }
 
     [Fact]
@@ -172,6 +175,13 @@ public sealed class ReportLogIntegrationTests : IDisposable
         Assert.Single(indexes);
         return indexes[0];
     }
+
+    private static List<int> HeaderIndexes(IReadOnlyList<string> paragraphs, string headerText) =>
+        paragraphs
+            .Select((text, index) => (text, index))
+            .Where(item => item.text == headerText)
+            .Select(item => item.index)
+            .ToList();
 
     private static bool HasPageBreakBefore(string logPath, int paragraphIndex)
     {

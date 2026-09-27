@@ -29,6 +29,17 @@ public partial class App : Application
             var settings = new SettingsService();
             settings.Load();
 
+            try
+            {
+                var removed = new BatchTempArtifactCleaner().CleanupAbandonedBatchDirectories(TimeSpan.FromHours(24));
+                if (removed > 0)
+                    _logger.LogInformation("Cleaned up {Count} abandoned batch render director(ies).", removed);
+            }
+            catch (Exception cleanupException)
+            {
+                _logger.LogWarning(cleanupException, "Abandoned batch temp directories could not be cleaned.");
+            }
+
             var validator = new ReportRecordValidator();
             var reportParser = new SpinReportParser();
             var resolver = new ReportRecordResolver(validator);

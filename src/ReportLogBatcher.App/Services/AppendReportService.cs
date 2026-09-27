@@ -246,6 +246,8 @@ public sealed class AppendReportService : IAppendReportService
             "The rendered entry did not pass validation, so the report log was NOT modified.",
         ReportLogWriteErrorKind.UnsupportedRenderedContent =>
             "The rendered entry contains content that cannot be safely merged. No report log was modified.",
+        ReportLogWriteErrorKind.AlreadyAppended =>
+            "This report has already been appended to the report log. It was NOT appended again.",
         ReportLogWriteErrorKind.BackupFailed =>
             "A backup of the report log could not be created, so the report log was NOT modified.",
         ReportLogWriteErrorKind.AppendFailed =>

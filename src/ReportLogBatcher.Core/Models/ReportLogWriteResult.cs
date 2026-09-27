@@ -10,6 +10,7 @@ public enum ReportLogWriteErrorKind
     DestinationInUse,
     InvalidRenderedEntry,
     UnsupportedRenderedContent,
+    AlreadyAppended,
     BackupFailed,
     AppendFailed,
     FinalValidationFailed,

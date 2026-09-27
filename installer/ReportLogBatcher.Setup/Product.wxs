@@ -1,0 +1,51 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="Report Log Batcher"
+           Manufacturer="Report Log Batcher"
+           Version="1.0.0"
+           Language="1033"
+           Scope="perMachine"
+           UpgradeCode="917a2a3e-5c48-4b6a-8e29-7c3f6d94b1a8"
+           Compressed="yes">
+    <SummaryInformation Description="Batches finalized SPIN reports into a project-specific Word report log." />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="ReportLogBatcher" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="Report Log Batcher" />
+    </StandardDirectory>
+
+    <Feature Id="MainProduct" Title="Report Log Batcher" Level="1">
+      <ComponentGroupRef Id="InstalledFiles" />
+      <ComponentGroupRef Id="StartMenuShortcuts" />
+    </Feature>
+
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+  </Package>
+
+  <Fragment>
+    <DirectoryRef Id="ApplicationProgramsFolder">
+        <Component Id="StartMenuShortcut"
+                   Guid="b6b18c8f-7e16-4e9b-9f1e-1b7c1d3e5a7c">
+          <Shortcut Id="ApplicationShortcut"
+                    Name="Report Log Batcher"
+                    Description="Batches finalized SPIN reports into a project-specific Word report log."
+                    Target="[INSTALLFOLDER]ReportLogBatcher.App.exe"
+                    WorkingDirectory="INSTALLFOLDER" />
+          <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
+          <RegistryValue Root="HKCU"
+                         Key="Software\ReportLogBatcher"
+                         Name="installed"
+                         Type="integer"
+                         Value="1"
+                         KeyPath="yes" />
+        </Component>
+      </DirectoryRef>
+      <ComponentGroup Id="StartMenuShortcuts">
+        <ComponentRef Id="StartMenuShortcut" />
+      </ComponentGroup>
+    </Fragment>
+</Wix>
